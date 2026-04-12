@@ -1,0 +1,19 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/public/login.html" },
+    { "source": "/login", "destination": "/public/login.html" },
+    { "source": "/dashboard", "destination": "/public/dashboard.html" },
+    { "source": "/meeting", "destination": "/public/meeting.html" },
+    { "source": "/style.css", "destination": "/public/style.css" },
+    { "source": "/login.js", "destination": "/public/login.js" },
+    { "source": "/dashboard.js", "destination": "/public/dashboard.js" },
+    { "source": "/meeting.js", "destination": "/public/meeting.js" },
+    { "source": "/runtime-config.js", "destination": "/public/runtime-config.js" },
+    { "source": "/socket.io/socket.io.js", "destination": "https://cdn.socket.io/4.8.1/socket.io.min.js" }
+  ],
+  "functions": {
+    "api/*.js": {
+      "runtime": "nodejs20.x"
+    }
+  }
+}

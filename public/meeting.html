@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MeetRecap — Meeting</title>
+    <meta name="description" content="MeetRecap live meeting room." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  </head>
+  <body>
+    <div class="meeting-page">
+
+      <!-- ── Meeting Topbar ──────────────────────────── -->
+      <header class="meeting-topbar">
+        <!-- Left: Brand + Info -->
+        <div class="meeting-info">
+          <a href="/dashboard" class="brand" style="text-decoration:none;">
+            <div class="brand-orb" style="width:30px;height:30px;border-radius:8px;">
+              <i class="bi bi-camera-video-fill" style="color:#fff;position:relative;z-index:1;font-size:0.75rem;"></i>
+            </div>
+            <span class="brand-name" style="font-size:0.95rem;">MeetRecap</span>
+          </a>
+
+          <div class="meeting-title-wrap">
+            <h3 id="meetingTitle">Meeting</h3>
+            <span id="meetingIdDisplay"></span>
+          </div>
+        </div>
+
+        <!-- Center: Timer + Participants -->
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="meeting-timer" id="meetingTimer">00:00</div>
+          <div class="participant-count">
+            <i class="bi bi-people-fill"></i>
+            <span id="participantCount">1</span>
+          </div>
+        </div>
+
+        <!-- Right: Actions -->
+        <div style="display:flex;align-items:center;gap:8px;">
+          <button id="copyLinkBtn" class="btn btn-secondary" style="font-size:0.82rem;">
+            <i class="bi bi-link-45deg"></i>
+            <span>Copy Invite</span>
+          </button>
+          <button id="toggleChatBtn" class="btn btn-secondary" style="font-size:0.82rem;">
+            <i class="bi bi-chat-dots"></i>
+            <span id="chatToggleLabel">Chat</span>
+          </button>
+          <a href="/dashboard" class="btn btn-ghost" style="font-size:0.82rem;">
+            <i class="bi bi-arrow-left"></i> Dashboard
+          </a>
+        </div>
+      </header>
+
+      <!-- ── Meeting Body ────────────────────────────── -->
+      <div class="meeting-body">
+
+        <aside id="hostApprovalPanel" class="host-approval-panel hidden" aria-label="Join requests">
+          <div class="host-approval-head">
+            <h3><i class="bi bi-person-check-fill"></i> Join Requests</h3>
+            <span id="hostApprovalCount" class="badge badge-violet">0</span>
+          </div>
+          <div id="hostApprovalList" class="host-approval-list"></div>
+        </aside>
+
+        <!-- Video Area -->
+        <div class="video-area">
+          <div id="videoGrid" class="video-grid"></div>
+
+          <!-- Controls Bar -->
+          <div class="controls-bar">
+            <!-- Mic -->
+            <button id="toggleMicBtn" class="ctrl-btn" title="Toggle Microphone">
+              <i class="bi bi-mic-fill"></i>
+              <span class="ctrl-tooltip">Mute Mic</span>
+            </button>
+
+            <!-- Camera -->
+            <button id="toggleCamBtn" class="ctrl-btn" title="Toggle Camera">
+              <i class="bi bi-camera-video-fill"></i>
+              <span class="ctrl-tooltip">Turn Off Camera</span>
+            </button>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Screen Share -->
+            <button id="shareScreenBtn" class="ctrl-btn" title="Share Screen">
+              <i class="bi bi-display"></i>
+              <span class="ctrl-tooltip">Share Screen</span>
+            </button>
+
+            <!-- Chat -->
+            <button id="chatToggleCtrlBtn" class="ctrl-btn" title="Toggle Chat">
+              <i class="bi bi-chat-dots-fill"></i>
+              <span class="ctrl-tooltip">Chat</span>
+            </button>
+
+            <div class="ctrl-divider"></div>
+
+            <!-- Leave -->
+            <button id="leaveBtn" class="ctrl-btn danger" title="Leave Meeting">
+              <i class="bi bi-telephone-x-fill"></i>
+              <span class="ctrl-tooltip">Leave Meeting</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Chat Drawer -->
+        <aside id="chatDrawer" class="chat-drawer" aria-label="Meeting chat">
+          <div class="chat-header">
+            <h3><i class="bi bi-chat-dots"></i> Chat</h3>
+            <button class="btn btn-ghost btn-icon" id="closeChatBtn" aria-label="Close chat" style="width:32px;height:32px;font-size:0.9rem;">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <div id="chatMessages" class="chat-messages">
+            <div class="empty-state" id="chatEmpty">
+              <div class="empty-icon"><i class="bi bi-chat-square-dots"></i></div>
+              <p>No messages yet. Say hello!</p>
+            </div>
+          </div>
+
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" type="text" maxlength="1000" placeholder="Type a message…" autocomplete="off" />
+            <button type="submit" class="chat-send-btn" aria-label="Send message">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </form>
+        </aside>
+      </div>
+
+      <div id="lobbyOverlay" class="lobby-overlay hidden" aria-live="polite">
+        <div class="lobby-card">
+          <p class="eyebrow">Meeting Lobby</p>
+          <h3 id="lobbyTitle">Waiting to Join</h3>
+          <p id="lobbyMessage" class="text-muted">Please wait while we prepare the room.</p>
+          <div id="lobbyCountdown" class="lobby-countdown hidden"></div>
+          <div class="lobby-actions">
+            <button id="lobbyRetryBtn" class="btn btn-secondary hidden" type="button">
+              <i class="bi bi-arrow-repeat"></i> Retry Join
+            </button>
+            <button id="lobbyLeaveBtn" class="btn btn-danger" type="button">
+              <i class="bi bi-box-arrow-left"></i> Leave Lobby
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Overlay -->
+      <p id="statusText" class="status" style="position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(15,20,40,0.9);padding:8px 18px;border-radius:20px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(12px);z-index:999;font-size:0.82rem;font-weight:600;opacity:0;transition:opacity 0.3s;pointer-events:none;"></p>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="./runtime-config.js"></script>
+    <script src="./meeting.js"></script>
+    <script>
+      /* ── Meeting UI enhancements ── */
+
+      /* Timer */
+      const timerEl = document.getElementById('meetingTimer');
+      let meetingStartAt = Date.now();
+
+      function updateTimer() {
+        const secs = Math.max(0, Math.floor((Date.now() - meetingStartAt) / 1000));
+        const m = String(Math.floor(secs / 60)).padStart(2, '0');
+        const s = String(secs % 60).padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+      }
+
+      window.addEventListener('meeting-started-at', (event) => {
+        const nextStart = Number(event.detail);
+        if (Number.isFinite(nextStart) && nextStart > 0) {
+          meetingStartAt = nextStart;
+          updateTimer();
+        }
+      });
+
+      updateTimer();
+      setInterval(updateTimer, 1000);
+
+      /* Meeting ID display */
+      const urlMeetingId = new URLSearchParams(window.location.search).get('meeting') || '';
+      const meetingIdDisplay = document.getElementById('meetingIdDisplay');
+      if (urlMeetingId) meetingIdDisplay.textContent = 'ID: ' + urlMeetingId;
+
+      /* Chat toggling */
+      const chatDrawer = document.getElementById('chatDrawer');
+      const chatToggleLabel = document.getElementById('chatToggleLabel');
+      let chatOpen = true;
+
+      function toggleChat() {
+        chatOpen = !chatOpen;
+        chatDrawer.classList.toggle('closed', !chatOpen);
+        chatToggleLabel.textContent = chatOpen ? 'Chat' : 'Open Chat';
+      }
+
+      if (window.matchMedia('(max-width: 768px)').matches) {
+        chatOpen = false;
+        chatDrawer.classList.add('closed');
+        chatToggleLabel.textContent = 'Open Chat';
+      }
+
+      document.getElementById('toggleChatBtn').addEventListener('click', toggleChat);
+      document.getElementById('chatToggleCtrlBtn').addEventListener('click', toggleChat);
+      document.getElementById('closeChatBtn').addEventListener('click', toggleChat);
+
+      /* Toast system */
+      function showToast(msg, icon = 'bi-check-circle-fill') {
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerHTML = `<i class="bi ${icon} toast-icon"></i> ${msg}`;
+        document.getElementById('toastContainer').appendChild(t);
+        setTimeout(() => {
+          t.classList.add('hide');
+          setTimeout(() => t.remove(), 300);
+        }, 2800);
+      }
+
+      /* Copy invite link */
+      document.getElementById('copyLinkBtn').addEventListener('click', () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(() => {
+          showToast('Invite link copied!');
+        }).catch(() => {
+          showToast('Could not copy link.', 'bi-x-circle-fill');
+        });
+      });
+
+      /* Control button state management */
+      function patchControlButtons() {
+        /* Mic toggle visual state */
+        const micBtn = document.getElementById('toggleMicBtn');
+        const camBtn = document.getElementById('toggleCamBtn');
+        const screenBtn = document.getElementById('shareScreenBtn');
+
+        micBtn?.addEventListener('click', () => {
+          const icon = micBtn.querySelector('i');
+          const muted = micBtn.classList.toggle('off');
+          icon.className = muted ? 'bi bi-mic-mute-fill' : 'bi bi-mic-fill';
+          micBtn.querySelector('.ctrl-tooltip').textContent = muted ? 'Unmute Mic' : 'Mute Mic';
+        });
+
+        camBtn?.addEventListener('click', () => {
+          const icon = camBtn.querySelector('i');
+          const off = camBtn.classList.toggle('off');
+          icon.className = off ? 'bi bi-camera-video-off-fill' : 'bi bi-camera-video-fill';
+          camBtn.querySelector('.ctrl-tooltip').textContent = off ? 'Turn On Camera' : 'Turn Off Camera';
+        });
+
+        screenBtn?.addEventListener('click', () => {
+          const sharing = screenBtn.classList.toggle('active');
+          screenBtn.querySelector('.ctrl-tooltip').textContent = sharing ? 'Stop Sharing' : 'Share Screen';
+        });
+      }
+
+      /* Patch chat empty state removal */
+      const origChatMessages = document.getElementById('chatMessages');
+      const chatEmpty = document.getElementById('chatEmpty');
+      const observer = new MutationObserver(() => {
+        const hasBubbles = origChatMessages.querySelector('.chat-bubble');
+        if (chatEmpty) chatEmpty.style.display = hasBubbles ? 'none' : '';
+      });
+      observer.observe(origChatMessages, { childList: true });
+
+      patchControlButtons();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MeetRecap — Dashboard</title>
+    <meta name="description" content="MeetRecap Dashboard — manage meetings, schedule, and history." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  </head>
+  <body>
+    <!-- Background -->
+    <div class="bg-canvas">
+      <div class="bg-blob bg-blob-1"></div>
+      <div class="bg-blob bg-blob-2"></div>
+    </div>
+    <div class="bg-grid"></div>
+
+    <div class="app-shell">
+      <!-- Navbar -->
+      <nav class="navbar">
+        <a href="/dashboard" class="brand">
+          <div class="brand-orb">
+            <i class="bi bi-camera-video-fill" style="color:#fff;position:relative;z-index:1;font-size:0.9rem;"></i>
+          </div>
+          <div class="brand-info">
+            <span class="brand-sub">Collaboration</span>
+            <span class="brand-name">MeetRecap</span>
+          </div>
+        </a>
+
+        <div class="navbar-end">
+          <!-- Mobile Menu Toggle -->
+          <button class="btn btn-icon" id="mobileMenuBtn" aria-label="Toggle menu">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <div class="user-pill" id="userPill">
+            <div class="avatar" id="userAvatar">U</div>
+            <span class="user-name" id="userNameLabel">Loading…</span>
+            <i class="bi bi-chevron-down user-pill-arrow" style="color:var(--text-3);font-size:0.7rem;"></i>
+          </div>
+
+          <button id="logoutBtn" class="btn btn-secondary" aria-label="Logout">
+            <i class="bi bi-box-arrow-right"></i>
+            <span>Logout</span>
+          </button>
+        </div>
+      </nav>
+
+      <div id="mobileSidebarBackdrop" class="mobile-sidebar-backdrop"></div>
+
+      <!-- Dashboard Shell -->
+      <div class="dashboard-shell">
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar" role="navigation" aria-label="Dashboard navigation">
+          <span class="sidebar-label">Main</span>
+
+          <button class="sidebar-link active" data-section="home" id="nav-home">
+            <span class="nav-icon"><i class="bi bi-grid-1x2-fill"></i></span>
+            Overview
+          </button>
+
+          <button class="sidebar-link" data-section="join" id="nav-join">
+            <span class="nav-icon"><i class="bi bi-camera-video-fill"></i></span>
+            Join / Start
+          </button>
+
+          <span class="sidebar-label">Meetings</span>
+
+          <button class="sidebar-link" data-section="schedule" id="nav-schedule">
+            <span class="nav-icon"><i class="bi bi-calendar-plus"></i></span>
+            Schedule
+          </button>
+
+          <button class="sidebar-link" data-section="history" id="nav-history">
+            <span class="nav-icon"><i class="bi bi-clock-history"></i></span>
+            History
+          </button>
+
+          <span class="sidebar-label">Preferences</span>
+
+          <button class="sidebar-link" data-section="settings" id="nav-settings">
+            <span class="nav-icon"><i class="bi bi-gear"></i></span>
+            Settings
+          </button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+
+          <!-- ── Overview Section ───────────────────────── -->
+          <section id="section-home" class="dash-section active">
+            <div class="section-header">
+              <p class="eyebrow">Dashboard</p>
+              <h2>Good to see you, <span class="grad-text" id="welcomeText">there</span> 👋</h2>
+              <p class="text-muted">Here's what's happening with your meetings today.</p>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card" style="margin-bottom:20px;">
+              <div class="card-title">Quick Actions</div>
+              <div class="card-desc" style="margin-bottom:16px;">Start or join a meeting instantly</div>
+              <div class="action-buttons">
+                <button id="createMeetingBtnOverview" class="btn btn-brand">
+                  <i class="bi bi-plus-circle-fill"></i> New Instant Meeting
+                </button>
+                <button class="btn btn-secondary" data-section="join" id="goToJoinBtn">
+                  <i class="bi bi-arrow-right-circle"></i> Join by ID
+                </button>
+                <button class="btn btn-secondary" data-section="schedule" id="goToScheduleBtn">
+                  <i class="bi bi-calendar-plus"></i> Schedule Meeting
+                </button>
+              </div>
+            </div>
+
+            <!-- Upcoming Meetings mini view -->
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div class="card-title">Upcoming Meetings</div>
+                <button class="btn btn-ghost" style="font-size:0.8rem;" data-section="schedule" id="seeAllScheduled">
+                  See All <i class="bi bi-arrow-right"></i>
+                </button>
+              </div>
+              <div id="overviewScheduledList" class="meeting-list"></div>
+            </div>
+          </section>
+
+          <!-- ── Join / Start Section ───────────────────── -->
+          <section id="section-join" class="dash-section">
+            <div class="section-header">
+              <p class="eyebrow">Meetings</p>
+              <h2>Join or Start</h2>
+              <p class="text-muted">Create an instant meeting or enter a Meeting ID to join.</p>
+            </div>
+
+            <div class="dash-grid">
+              <!-- Create Card -->
+              <div class="card">
+                <div style="margin-bottom:16px;">
+                  <div class="stat-icon violet" style="margin-bottom:12px;"><i class="bi bi-plus-lg"></i></div>
+                  <div class="card-title">Instant Meeting</div>
+                  <div class="card-desc" style="margin-top:4px;">Start a new meeting right now with a unique ID.</div>
+                </div>
+                <button id="createMeetingBtn" class="btn btn-brand w-full">
+                  <i class="bi bi-camera-video-fill"></i> Start Now
+                </button>
+              </div>
+
+              <!-- Join Card -->
+              <div class="card">
+                <div style="margin-bottom:16px;">
+                  <div class="stat-icon cyan" style="margin-bottom:12px;"><i class="bi bi-arrow-right-circle"></i></div>
+                  <div class="card-title">Join a Meeting</div>
+                  <div class="card-desc" style="margin-top:4px;">Enter a Meeting ID shared by the host.</div>
+                </div>
+                <div class="join-row">
+                  <div class="form-group">
+                    <div class="input-wrap">
+                      <i class="bi bi-hash input-icon"></i>
+                      <input id="meetingIdInput" type="text" placeholder="Enter meeting ID (e.g. ABCD-1234)" autocomplete="off" />
+                    </div>
+                  </div>
+                  <button id="joinMeetingBtn" class="btn btn-primary">
+                    <i class="bi bi-box-arrow-in-right"></i> Join
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p id="statusText" class="status mt-16"></p>
+          </section>
+
+          <!-- ── Schedule Section ───────────────────────── -->
+          <section id="section-schedule" class="dash-section">
+            <div class="section-header">
+              <p class="eyebrow">Planning</p>
+              <h2>Schedule a Meeting</h2>
+              <p class="text-muted">Set a date and time for your next meeting.</p>
+            </div>
+
+            <div class="dash-grid">
+              <!-- Schedule Form -->
+              <div class="card">
+                <div class="card-title" style="margin-bottom:16px;">New Scheduled Meeting</div>
+                <form id="scheduleForm" class="schedule-form">
+                  <div class="form-group">
+                    <label class="form-label" for="scheduleTitle">Meeting Title</label>
+                    <div class="input-wrap">
+                      <i class="bi bi-pencil input-icon"></i>
+                      <input id="scheduleTitle" type="text" maxlength="60" placeholder="Weekly Team Sync" required autocomplete="off" />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="scheduleDateTime">Date &amp; Time</label>
+                    <div class="input-wrap">
+                      <i class="bi bi-calendar3 input-icon"></i>
+                      <input id="scheduleDateTime" type="datetime-local" required style="padding-left:42px;" />
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-brand w-full" id="scheduleSubmitBtn">
+                    <div class="spinner"></div>
+                    <span class="btn-text"><i class="bi bi-calendar-check"></i> Schedule Meeting</span>
+                  </button>
+                </form>
+                <p id="scheduleStatusText" class="status mt-16"></p>
+              </div>
+
+              <!-- Upcoming Meetings List -->
+              <div class="card">
+                <div class="card-title" style="margin-bottom:16px;">Upcoming Meetings</div>
+                <div id="scheduledList" class="meeting-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ── History Section ────────────────────────── -->
+          <section id="section-history" class="dash-section">
+            <div class="section-header">
+              <p class="eyebrow">Activity</p>
+              <h2>Meeting History</h2>
+              <p class="text-muted">Your recent meeting activity and durations.</p>
+            </div>
+
+            <div class="card">
+              <div id="historyList" class="meeting-list"></div>
+            </div>
+          </section>
+
+          <!-- ── Settings Section ───────────────────────── -->
+          <section id="section-settings" class="dash-section">
+            <div class="section-header">
+              <p class="eyebrow">Preferences</p>
+              <h2>Settings</h2>
+              <p class="text-muted">Customize your MeetRecap experience.</p>
+            </div>
+
+            <div class="card">
+              <div class="card-title" style="margin-bottom:16px;">Video Preferences</div>
+              <div class="settings-rows">
+                <label class="settings-row" for="mirrorToggle">
+                  <div class="settings-row-info">
+                    <strong>Mirror Self-View</strong>
+                    <p>Flip your own camera preview horizontally (does not affect others).</p>
+                  </div>
+                  <span class="switch">
+                    <input id="mirrorToggle" type="checkbox" />
+                    <span class="slider"></span>
+                  </span>
+                </label>
+
+                <div class="settings-row">
+                  <div class="settings-row-info">
+                    <strong>Theme</strong>
+                    <p>Switch between dark and light appearance for the dashboard.</p>
+                  </div>
+                  <button id="themeToggleBtn" type="button" class="btn btn-secondary btn-theme">
+                    Dark Theme
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </main>
+      </div>
+
+      <nav class="mobile-bottom-nav" aria-label="Bottom navigation">
+        <button class="mobile-nav-link active" data-section="home" aria-label="Overview">
+          <i class="bi bi-grid-1x2-fill"></i>
+          <span>Home</span>
+        </button>
+        <button class="mobile-nav-link" data-section="join" aria-label="Join or start">
+          <i class="bi bi-camera-video-fill"></i>
+          <span>Meet</span>
+        </button>
+        <button class="mobile-nav-link" data-section="schedule" aria-label="Schedule">
+          <i class="bi bi-calendar-plus"></i>
+          <span>Plan</span>
+        </button>
+        <button class="mobile-nav-link" data-section="history" aria-label="History">
+          <i class="bi bi-clock-history"></i>
+          <span>History</span>
+        </button>
+        <button class="mobile-nav-link" data-section="settings" aria-label="Settings">
+          <i class="bi bi-gear-fill"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <div id="meetingTitleDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="meetingTitleDialogHeading">
+        <div class="dialog-card" role="document">
+          <div class="dialog-head">
+            <p class="eyebrow">Instant Meeting</p>
+            <h3 id="meetingTitleDialogHeading">Meeting Title</h3>
+            <p class="text-muted">Give your meeting a clear title before starting.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="meetingTitleDialogInput">Title</label>
+            <div class="input-wrap">
+              <i class="bi bi-pencil input-icon"></i>
+              <input id="meetingTitleDialogInput" type="text" maxlength="60" placeholder="Instant Meeting" autocomplete="off" />
+            </div>
+            <p id="meetingTitleDialogStatus" class="status"></p>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="button" id="meetingTitleDialogCancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="meetingTitleDialogConfirm" class="btn btn-brand">Start Meeting</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./runtime-config.js"></script>
+    <script src="./dashboard.js"></script>
+  </body>
+</html>
