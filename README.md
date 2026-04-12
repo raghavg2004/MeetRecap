@@ -1,24 +1,20 @@
-# Multi VideoCall Platform (Meeting ID Based)
+# MeetRecap
 
-A login-first multi-user video calling platform with a dashboard for creating, joining, scheduling, and tracking meetings.
+MeetRecap is a login-first multi-user video calling platform with a dashboard for creating, joining, scheduling, and tracking meetings.
 
 ## Features
 
-- Proper login/register page
-- User dashboard after login
-- Create instant meetings
-- Join meetings by Meeting ID
-- Join by shared link (`?meeting=MEETING_ID`)
+- Login and register flow
+- Dashboard after login
+- Instant meetings with host approval
+- Meeting links with scheduled lobby gating
 - Schedule upcoming meetings
 - Meeting history tracking
-- Account authentication with email/password
-- JWT + session support for authenticated access
-- Multi-user video + audio with WebRTC
-- Mute/unmute mic, camera on/off, screen sharing
+- JWT + session authentication
+- Multi-user video/audio with WebRTC
+- Mic/camera controls and screen sharing
 - In-meeting realtime chat
-- Host controls for mute/remove participant
-- Lock meeting button removed from UI
-- Responsive UI for desktop and mobile
+- Responsive mobile-first UI
 
 ## Tech Stack
 
@@ -27,7 +23,7 @@ A login-first multi-user video calling platform with a dashboard for creating, j
 - WebRTC for peer-to-peer media
 - HTML/CSS/JavaScript frontend
 
-## Setup
+## Local Setup
 
 1. Install dependencies:
 
@@ -43,15 +39,15 @@ A login-first multi-user video calling platform with a dashboard for creating, j
 
 ## Production Configuration
 
-Use environment variables to tune deployment behavior:
+Environment variables used by the app:
 
-- PORT: HTTP port (default: 3000)
-- MAX_ROOM_SIZE: max participants per room (default: 12)
-- ALLOWED_ORIGIN: allowed Socket.IO origin (default: same origin)
+- PORT: HTTP port, default `3000`
+- MAX_ROOM_SIZE: max participants per room, default `12`
+- ALLOWED_ORIGIN: allowed Socket.IO origin
 - SESSION_SECRET: secret for session signing
 - JWT_SECRET: secret for JWT signing
-- JWT_EXPIRES_IN: token expiry (default: 12h)
-- TURN_URL: TURN server URL, example `turn:turn.example.com:3478`
+- JWT_EXPIRES_IN: token expiry, default `12h`
+- TURN_URL: TURN server URL, for example `turn:turn.example.com:3478`
 - TURN_USERNAME: TURN username
 - TURN_CREDENTIAL: TURN credential/secret
 
@@ -77,31 +73,17 @@ Recommended split deployment:
 
 The frontend reads runtime config from `/api/app-config` on Vercel and falls back to same-origin when running locally.
 
-To push to GitHub:
+## Push to GitHub
 
-1. Create a GitHub repository.
-2. Add it as a remote.
-3. Push the repo normally with Git.
-
-Example:
-
-   git remote add origin https://github.com/<your-user>/<your-repo>.git
-   git branch -M main
-   git push -u origin main
-
-Example (PowerShell):
-
-   $env:TURN_URL="turn:turn.example.com:3478"
-   $env:TURN_USERNAME="turn-user"
-   $env:TURN_CREDENTIAL="turn-password"
-   $env:SESSION_SECRET="replace-with-long-random-secret"
-   $env:JWT_SECRET="replace-with-long-random-secret"
-   npm start
+```bash
+git remote add origin https://github.com/raghavg2004/MeetRecap.git
+git branch -M main
+git push -u origin main
+```
 
 ## Notes
 
 - Current authentication, schedule, and history storage are in-memory for this project scaffold.
 - For true production persistence, connect users/rooms/meetings to a database and shared cache.
 - This uses a mesh WebRTC architecture, suitable for small groups.
-- For larger meetings, use an SFU (like mediasoup/Janus/Jitsi stack).
-- For production-grade reliability across NAT/firewalls, configure TURN.
+- For larger meetings, use an SFU such as mediasoup, Janus, or Jitsi.
