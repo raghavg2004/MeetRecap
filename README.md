@@ -53,25 +53,18 @@ Environment variables used by the app:
 
 ## Deployment Notes
 
-This app uses a Socket.IO/WebRTC meeting server, so the full stack cannot run on Vercel alone.
+Deploy this app on any Node.js host that supports WebSockets (for example Render, Railway, Fly.io, or VPS).
 
-Recommended split deployment:
+Recommended setup:
 
-1. Frontend on Vercel
-   - Deploy the repository as a Vercel project.
-   - Set these Vercel environment variables:
-     - `BACKEND_ORIGIN`: your backend base URL, for example `https://your-backend.onrender.com`
-     - `SOCKET_ORIGIN`: same as backend URL if Socket.IO runs on the backend host
-
-2. Backend on a Node host
-   - Deploy `server.js` to Render, Railway, Fly.io, or any Node host with WebSocket support.
-   - Set backend environment variables:
-     - `ALLOWED_ORIGIN`: your Vercel site URL, for example `https://your-app.vercel.app`
-     - `SESSION_SECRET`
-     - `JWT_SECRET`
-     - `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` if you use TURN
-
-The frontend reads runtime config from `/api/app-config` on Vercel and falls back to same-origin when running locally.
+1. Run the Node server from this repository.
+2. Set environment variables as needed:
+   - `PORT`
+   - `ALLOWED_ORIGIN`
+   - `SESSION_SECRET`
+   - `JWT_SECRET`
+   - `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` (optional, for TURN)
+3. Ensure your host allows persistent WebSocket connections for Socket.IO.
 
 ## Push to GitHub
 
