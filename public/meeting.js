@@ -3,6 +3,8 @@ const copyLinkBtn = document.getElementById("copyLinkBtn");
 const toggleMicBtn = document.getElementById("toggleMicBtn");
 const toggleCamBtn = document.getElementById("toggleCamBtn");
 const shareScreenBtn = document.getElementById("shareScreenBtn");
+const languageSelector = document.getElementById("languageSelector");
+const endMeetingBtn = document.getElementById("endMeetingBtn");
 const leaveBtn = document.getElementById("leaveBtn");
 const videoGrid = document.getElementById("videoGrid");
 const chatMessages = document.getElementById("chatMessages");
@@ -18,6 +20,21 @@ const lobbyLeaveBtn = document.getElementById("lobbyLeaveBtn");
 const hostApprovalPanel = document.getElementById("hostApprovalPanel");
 const hostApprovalList = document.getElementById("hostApprovalList");
 const hostApprovalCount = document.getElementById("hostApprovalCount");
+const meetingRecapOverlay = document.getElementById("meetingRecapOverlay");
+const recapTitle = document.getElementById("recapTitle");
+const recapSubtitle = document.getElementById("recapSubtitle");
+const recapStatusBadge = document.getElementById("recapStatusBadge");
+const recapStats = document.getElementById("recapStats");
+const recapHighlights = document.getElementById("recapHighlights");
+const recapParticipants = document.getElementById("recapParticipants");
+const recapTranscript = document.getElementById("recapTranscript");
+const recapChat = document.getElementById("recapChat");
+const liveTranscriptPanel = document.getElementById("liveTranscriptPanel");
+const liveTranscriptFeed = document.getElementById("liveTranscriptFeed");
+const liveTranscriptEmpty = document.getElementById("liveTranscriptEmpty");
+const viewHighlightsBtn = document.getElementById("viewHighlightsBtn");
+const downloadRecapBtn = document.getElementById("downloadRecapBtn");
+const closeRecapBtn = document.getElementById("closeRecapBtn");
 
 const peers = new Map();
 const participants = new Map();
@@ -43,10 +60,154 @@ let currentLobbyRetryAt = 0;
 let lobbyCountdownInterval = null;
 let isHostUser = false;
 let pendingJoinRequests = [];
+let meetingEnded = false;
+let currentMeetingRecap = null;
+let currentPersonalRecap = null;
+let speechRecognition = null;
+let speechRecognitionActive = false;
+let speechRecognitionShouldListen = false;
+let speechRecognitionSessionId = 0;
+let lastTranscriptSentAt = 0;
+let lastTranscriptText = "";
+let transcriptRetryArmed = false;
+let speechRecognitionWatchdogInterval = null;
+let speechUnsupportedNotified = false;
+let forcedTranscriptLanguage = "";
+
+const HINDI_SPEECH_LANGUAGE = "hi-IN";
+
+if (languageSelector && !languageSelector.value) {
+  languageSelector.value = HINDI_SPEECH_LANGUAGE;
+}
+
+function getPreferredTranscriptLanguage() {
+  return HINDI_SPEECH_LANGUAGE;
+}
+
+function getSpeechRecognitionCtor() {
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function getSpeechRecognitionLanguage() {
+  return HINDI_SPEECH_LANGUAGE;
+}
+
+function getSpeechLanguageLabel(language) {
+  return "हिंदी (Hindi)";
+}
+
+function sanitizeTranscriptText(text) {
+  if (typeof text !== "string") {
+    return "";
+  }
+
+  const cleaned = text.trim().replace(/\s+/g, " ");
+  if (!cleaned || cleaned.length > 2000) {
+    return "";
+  }
+
+  return cleaned.replace(/[<>]/g, "");
+}
+
+function emitSpeechTranscript(text) {
+  if (!socket || !currentRoomId || meetingEnded) {
+    return;
+  }
+
+  const safeText = sanitizeTranscriptText(text);
+  if (!safeText) {
+    return;
+  }
+
+  const now = Date.now();
+  if (safeText === lastTranscriptText && now - lastTranscriptSentAt < 1500) {
+    return;
+  }
+
+  lastTranscriptText = safeText;
+  lastTranscriptSentAt = now;
+
+  socket.emit("voice-transcript", {
+    text: safeText,
+    timestamp: now,
+  });
+}
 
 let rtcConfig = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
+
+let notificationAudioContext = null;
+
+function getNotificationSetting(key) {
+  return localStorage.getItem(key) !== "false";
+}
+
+function getNotificationAudioContext() {
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextCtor) {
+    return null;
+  }
+
+  if (!notificationAudioContext) {
+    notificationAudioContext = new AudioContextCtor();
+  }
+
+  return notificationAudioContext;
+}
+
+async function unlockNotificationAudio() {
+  const audioContext = getNotificationAudioContext();
+  if (!audioContext) {
+    return;
+  }
+
+  if (audioContext.state === "suspended") {
+    try {
+      await audioContext.resume();
+    } catch {
+      // Ignore resume failures caused by browser policy.
+    }
+  }
+}
+
+function playNotificationBeep(kind) {
+  const audioContext = getNotificationAudioContext();
+  if (!audioContext) {
+    return;
+  }
+
+  if (audioContext.state === "suspended") {
+    audioContext.resume().catch(() => {});
+  }
+
+  const now = audioContext.currentTime;
+  const tones = kind === "chat"
+    ? [{ frequency: 880, duration: 0.09 }, { frequency: 1046, duration: 0.07 }]
+    : [{ frequency: 620, duration: 0.08 }, { frequency: 820, duration: 0.09 }];
+
+  let offset = 0;
+  tones.forEach((tone) => {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = tone.frequency;
+    gainNode.gain.setValueAtTime(0.0001, now + offset);
+    gainNode.gain.exponentialRampToValueAtTime(0.14, now + offset + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + offset + tone.duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start(now + offset);
+    oscillator.stop(now + offset + tone.duration + 0.02);
+
+    offset += tone.duration + 0.03;
+  });
+}
+
+document.addEventListener("pointerdown", unlockNotificationAudio, { once: true, passive: true });
+document.addEventListener("keydown", unlockNotificationAudio, { once: true });
 
 function getToken() {
   return localStorage.getItem("authToken") || "";
@@ -206,6 +367,9 @@ function setHostMode(value) {
   if (!isHostUser) {
     pendingJoinRequests = [];
   }
+  if (endMeetingBtn) {
+    endMeetingBtn.classList.toggle("hidden", !isHostUser || meetingEnded);
+  }
   renderJoinRequests();
 }
 
@@ -240,6 +404,339 @@ function applyMeetingMeta(roomMeta) {
   }
 
   updateMeetingTimerDisplay();
+}
+
+function formatDurationHuman(durationMs) {
+  const totalSeconds = Math.max(0, Math.floor(Number(durationMs || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (hours > 0) {
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getApiPath(path) {
+  return (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(""))
+    .then((apiBaseUrl) => (apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path));
+}
+
+function safeRecapList(items, emptyText) {
+  if (!Array.isArray(items) || !items.length) {
+    return `<div class="empty-state"><div class="empty-icon"><i class="bi bi-journal-text"></i></div><p>${emptyText}</p></div>`;
+  }
+
+  return items.join("");
+}
+
+function formatRecapTime(value) {
+  return escHtml(new Date(value || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+}
+
+function renderMeetingRecap(recap) {
+  currentMeetingRecap = recap || null;
+  if (!meetingRecapOverlay || !recap) {
+    return;
+  }
+
+  meetingEnded = true;
+  if (endMeetingBtn) {
+    endMeetingBtn.classList.add("hidden");
+  }
+
+  const participantsList = Array.isArray(recap.participants) ? recap.participants : [];
+  const transcripts = Array.isArray(recap.transcripts) ? recap.transcripts : [];
+  const chats = Array.isArray(recap.chatMessages) ? recap.chatMessages : [];
+
+  if (recapTitle) recapTitle.textContent = `MOM for ${recap.title || currentMeetingTitle || currentRoomId || "meeting"}`;
+  if (recapSubtitle) {
+    recapSubtitle.textContent = `Meeting ended at ${new Date(recap.endedAt || Date.now()).toLocaleString()} and was active for ${formatDurationHuman(recap.durationMs)}`;
+  }
+  if (recapStatusBadge) recapStatusBadge.textContent = `${recap.summary?.transcriptCount || transcripts.length} voice notes`;
+
+  if (recapStats) {
+    recapStats.innerHTML = [
+      { label: "Duration", value: formatDurationHuman(recap.durationMs) },
+      { label: "Participants", value: String(recap.participantCount || participantsList.length) },
+      { label: "Voice Notes", value: String(recap.summary?.transcriptCount || transcripts.length) },
+      { label: "Chat Messages", value: String(recap.summary?.chatCount || chats.length) },
+    ].map((item) => `
+      <div class="recap-stat">
+        <span>${escHtml(item.label)}</span>
+        <strong>${escHtml(item.value)}</strong>
+      </div>
+    `).join("");
+  }
+
+  if (recapParticipants) {
+    recapParticipants.innerHTML = safeRecapList(
+      participantsList.map((participant) => `
+        <div class="recap-item">
+          <div>
+            <strong>${escHtml(participant.username || "Participant")}</strong>
+            <p>${participant.isHost ? "Host" : "Member"}</p>
+          </div>
+          <span class="badge badge-cyan">${participant.isHost ? "Host" : "Joined"}</span>
+        </div>
+      `),
+      "No participant data was captured.",
+    );
+  }
+
+  if (recapTranscript) {
+    recapTranscript.innerHTML = safeRecapList(
+      transcripts.map((entry) => `
+        <div class="recap-item recap-log-item">
+          <div>
+            <strong>${escHtml(entry.username || "Participant")}</strong>
+            <p>${escHtml(entry.text || "")}</p>
+          </div>
+          <span>${formatRecapTime(entry.timestamp)}</span>
+        </div>
+      `),
+      "No voice transcript was captured.",
+    );
+  }
+
+  if (recapChat) {
+    recapChat.innerHTML = safeRecapList(
+      chats.map((entry) => `
+        <div class="recap-item recap-log-item">
+          <div>
+            <strong>${escHtml(entry.username || "Participant")}</strong>
+            <p>${escHtml(entry.text || "")}</p>
+          </div>
+          <span>${formatRecapTime(entry.timestamp)}</span>
+        </div>
+      `),
+      "No chat messages were captured.",
+    );
+  }
+
+  meetingRecapOverlay.classList.remove("hidden");
+  recapHighlights?.classList.remove("hidden");
+}
+
+function showRecapHighlights() {
+  recapHighlights?.classList.toggle("hidden");
+}
+
+async function fetchMeetingRecap() {
+  if (!currentRoomId) {
+    return null;
+  }
+
+  try {
+    const url = await getApiPath(`/api/meetings/${encodeURIComponent(currentRoomId)}/recap`);
+    const response = await fetch(url, {
+      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return data.recap || null;
+  } catch {
+    return null;
+  }
+}
+
+async function downloadMeetingRecapPdf() {
+  if (!currentRoomId) {
+    return;
+  }
+
+  try {
+    const isPersonal = Boolean(currentPersonalRecap);
+    const path = isPersonal ? `/api/meetings/${encodeURIComponent(currentRoomId)}/personal-recap.pdf` : `/api/meetings/${encodeURIComponent(currentRoomId)}/recap.pdf`;
+    const url = await getApiPath(path);
+    const response = await fetch(url, {
+      headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error("Unable to generate PDF.");
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = `MeetRecap-${currentRoomId}-MOM.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+  } catch {
+    setStatus("Could not download the MOM PDF.");
+  }
+}
+
+function stopSpeechRecognition() {
+  speechRecognitionShouldListen = false;
+  speechRecognitionActive = false;
+  transcriptRetryArmed = false;
+  stopSpeechRecognitionWatchdog();
+  speechRecognitionSessionId += 1;
+
+  if (speechRecognition) {
+    const recognition = speechRecognition;
+    speechRecognition = null;
+    try {
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      recognition.stop();
+    } catch {
+      // Ignore shutdown errors.
+    }
+  }
+
+  lastTranscriptText = "";
+  lastTranscriptSentAt = 0;
+}
+
+function startSpeechRecognitionWatchdog() {
+  if (speechRecognitionWatchdogInterval || meetingEnded) {
+    return;
+  }
+
+  // Browser speech recognition can stop silently; watchdog keeps it alive.
+  speechRecognitionWatchdogInterval = setInterval(() => {
+    if (meetingEnded || !socket || !socket.connected) {
+      return;
+    }
+
+    if (!speechRecognitionActive) {
+      startSpeechRecognition();
+    }
+  }, 10000);
+}
+
+function stopSpeechRecognitionWatchdog() {
+  if (!speechRecognitionWatchdogInterval) {
+    return;
+  }
+
+  clearInterval(speechRecognitionWatchdogInterval);
+  speechRecognitionWatchdogInterval = null;
+}
+
+function armTranscriptRetryOnInteraction() {
+  if (transcriptRetryArmed || meetingEnded) {
+    return;
+  }
+
+  transcriptRetryArmed = true;
+  const retry = () => {
+    transcriptRetryArmed = false;
+    startSpeechRecognition();
+  };
+
+  // Some browsers require a fresh user gesture to start speech recognition.
+  window.addEventListener("pointerdown", retry, { once: true, passive: true });
+  window.addEventListener("keydown", retry, { once: true });
+}
+
+function startSpeechRecognition() {
+  if (speechRecognitionActive || meetingEnded || !micEnabled || !localStream || !currentRoomId) {
+    console.log("[STT] startSpeechRecognition guard:", { speechRecognitionActive, meetingEnded, micEnabled, localStream: !!localStream, currentRoomId });
+    return;
+  }
+
+  const SpeechRecognitionCtor = getSpeechRecognitionCtor();
+  if (!SpeechRecognitionCtor) {
+    if (!speechUnsupportedNotified) {
+      setStatus("Browser speech recognition is not supported here. Use Chrome or Edge.", "info");
+      speechUnsupportedNotified = true;
+    }
+    stopSpeechRecognitionWatchdog();
+    return;
+  }
+
+  const language = getSpeechRecognitionLanguage();
+  const sessionId = ++speechRecognitionSessionId;
+  speechRecognitionShouldListen = true;
+  speechUnsupportedNotified = false;
+  startSpeechRecognitionWatchdog();
+
+  try {
+    const recognition = new SpeechRecognitionCtor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.lang = language;
+
+    recognition.onresult = (event) => {
+      if (sessionId !== speechRecognitionSessionId || !speechRecognitionShouldListen || meetingEnded) {
+        return;
+      }
+
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        if (!result?.isFinal) {
+          continue;
+        }
+
+        const transcript = String(result[0]?.transcript || "").trim();
+        if (transcript) {
+          emitSpeechTranscript(transcript);
+        }
+      }
+    };
+
+    recognition.onerror = (event) => {
+      if (sessionId !== speechRecognitionSessionId) {
+        return;
+      }
+
+      const error = String(event?.error || "");
+      if (error === "no-speech" || error === "aborted") {
+        return;
+      }
+
+      if (error === "not-allowed" || error === "service-not-allowed" || error === "audio-capture") {
+        setStatus("Speech recognition was blocked or the microphone is unavailable.", "info");
+        stopSpeechRecognition();
+        return;
+      }
+
+      setStatus(`Speech recognition error: ${error || "unknown"}`, "warning");
+    };
+
+    recognition.onend = () => {
+      if (sessionId !== speechRecognitionSessionId) {
+        return;
+      }
+
+      speechRecognitionActive = false;
+      speechRecognition = null;
+
+      if (speechRecognitionShouldListen && !meetingEnded && micEnabled) {
+        setTimeout(() => startSpeechRecognition(), 300);
+      }
+    };
+
+    speechRecognition = recognition;
+    speechRecognitionActive = true;
+    recognition.start();
+    setStatus(`Speech recognition active in ${getSpeechLanguageLabel(language)}.`, "success");
+  } catch (error) {
+    speechRecognitionActive = false;
+    speechRecognition = null;
+    speechRecognitionShouldListen = false;
+    speechRecognitionSessionId += 1;
+    console.log("[STT] Failed to start browser speech recognition:", error);
+    setStatus("Unable to start browser speech recognition.", "info");
+    armTranscriptRetryOnInteraction();
+  }
 }
 
 function startMeetingTimer() {
@@ -295,195 +792,296 @@ async function loadRtcConfig() {
     const config = await response.json();
     if (Array.isArray(config.iceServers) && config.iceServers.length > 0) {
       rtcConfig = { iceServers: config.iceServers };
-        const token = getToken();
-        const connectSocket = async () => {
-          const socketUrl = await (window.getSocketUrl ? window.getSocketUrl() : Promise.resolve(""));
-          socket = socketUrl
-            ? io(socketUrl, {
-                autoConnect: true,
-                auth: { token },
-              })
-            : io({
-                autoConnect: true,
-                auth: { token },
-              });
+    }
+  } catch {
+    // Keep default ICE config.
+  }
+}
 
-          socket.on("connect", () => {
-            hasJoinedRoom = false;
-            emitJoinRoom();
-          });
+function escHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
-          socket.on("connect_error", (error) => {
-            setStatus(error.message || "Socket connection failed.");
-          });
+function formatTime(ts) {
+  const date = new Date(ts || Date.now());
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-          socket.on('existing-users', async ({ users, roomMeta }) => {
-            hideLobby();
-            applyMeetingMeta(roomMeta);
-            if (!currentMeetingJoinedAt) {
-              currentMeetingJoinedAt = Date.now();
-            }
+function renderChatEmpty() {
+  const emptyEl = document.getElementById("chatEmpty");
+  if (!chatMessages || !emptyEl) {
+    return;
+  }
 
-            const iAmHost = roomMeta && roomMeta.hostSocketId === socket.id;
-            setHostMode(iAmHost);
-            startMeetingTimer();
+  const hasBubbles = Boolean(chatMessages.querySelector(".chat-bubble"));
+  emptyEl.style.display = hasBubbles ? "none" : "";
+}
 
-            if (!roomMeta || !Number.isFinite(Number(roomMeta.participantCount))) {
-              const countEl = document.getElementById('participantCount');
-              if (countEl) countEl.textContent = String(users.length + 1);
-            }
+function renderLiveTranscriptEmpty() {
+  if (!liveTranscriptFeed || !liveTranscriptEmpty) {
+    return;
+  }
 
-            for (const user of users) {
-              participants.set(user.socketId, { username: user.username });
-              try {
-                await callUser(user.socketId);
-              } catch {
-                // Collision or transient SDP failures are handled by incoming offer flow.
-              }
-            }
-          });
+  const hasEntries = Boolean(liveTranscriptFeed.querySelector(".live-transcript-item"));
+  liveTranscriptEmpty.style.display = hasEntries ? "none" : "";
+}
 
-          socket.on("user-joined", async ({ socketId, username }) => {
-            participants.set(socketId, { username });
-          });
+function appendLiveTranscript(entry) {
+  if (!liveTranscriptPanel || !liveTranscriptFeed || !entry || !entry.text) {
+    return;
+  }
 
-          socket.on("offer", async ({ from, description }) => {
-            const pc = await createPeerConnection(from);
+  const transcriptItem = document.createElement("div");
+  transcriptItem.className = "live-transcript-item";
+  transcriptItem.innerHTML = `
+    <div class="live-transcript-meta">
+      <span class="live-transcript-speaker">${escHtml(entry.username || "Participant")}</span>
+      <span class="live-transcript-time">${escHtml(formatTime(entry.timestamp))}</span>
+    </div>
+    <div class="live-transcript-text">${escHtml(entry.text || "")}</div>
+  `;
 
-            if (pc.signalingState !== "stable") {
-              try {
-                await pc.setLocalDescription({ type: "rollback" });
-              } catch {
-                // If rollback is unsupported, continue and let setRemoteDescription throw.
-              }
-            }
+  liveTranscriptFeed.appendChild(transcriptItem);
 
-            await pc.setRemoteDescription(description);
-            await flushPendingCandidates(from, pc);
+  const entries = liveTranscriptFeed.querySelectorAll(".live-transcript-item");
+  if (entries.length > 80) {
+    entries[0].remove();
+  }
 
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
+  liveTranscriptFeed.scrollTop = liveTranscriptFeed.scrollHeight;
+  renderLiveTranscriptEmpty();
+}
 
-            socket.emit("answer", {
-              to: from,
-              description: pc.localDescription,
-            });
-          });
+function appendChatMessage(message) {
+  if (!chatMessages || !message || !message.text) {
+    return;
+  }
 
-          socket.on("answer", async ({ from, description }) => {
-            const pc = peers.get(from);
-            if (!pc) {
-              return;
-            }
+  const ownMessage = Boolean(socket && message.socketId === socket.id);
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble ${ownMessage ? "own" : "other"}`;
+  bubble.innerHTML = `
+    <span class="bubble-name">${escHtml(message.username || "Guest")}</span>
+    <p>${escHtml(message.text)}</p>
+    <span class="bubble-time">${escHtml(formatTime(message.timestamp))}</span>
+  `;
 
-            if (pc.signalingState !== "have-local-offer") {
-              return;
-            }
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  renderChatEmpty();
 
-            try {
-              await pc.setRemoteDescription(description);
-              await flushPendingCandidates(from, pc);
-            } catch {
-              setStatus("Reconnecting media stream...", "warning");
-            }
-          });
+  if (!ownMessage && getNotificationSetting("meetrecap.soundChat")) {
+    playNotificationBeep("chat");
+  }
+}
 
-          socket.on("ice-candidate", async ({ from, candidate }) => {
-            const pc = peers.get(from);
-            if (!pc || !pc.remoteDescription) {
-              const buffered = pendingCandidates.get(from) || [];
-              buffered.push(candidate);
-              pendingCandidates.set(from, buffered);
-              return;
-            }
+function getDisplayName(socketId) {
+  if (socket && socketId === socket.id) {
+    return "You";
+  }
 
-            try {
-              await pc.addIceCandidate(candidate);
-            } catch {
-              const buffered = pendingCandidates.get(from) || [];
-              buffered.push(candidate);
-              pendingCandidates.set(from, buffered);
-            }
-          });
+  return participants.get(socketId)?.username || "Participant";
+}
 
-          socket.on("chat-message", (message) => {
-            appendChatMessage(message);
-          });
+function addOrUpdateVideoTile(socketId, stream, name, isLocal = false, isHost = false, isMuted = false) {
+  if (!videoGrid || !stream) {
+    return;
+  }
 
-          socket.on("host-force-mute", ({ by }) => {
-            if (!localStream) {
-              return;
-            }
+  const tileId = `video-${socketId}`;
+  let tile = document.getElementById(tileId);
+  if (!tile) {
+    tile = document.createElement("div");
+    tile.className = "video-tile";
+    tile.id = tileId;
+    tile.innerHTML = `
+      <video ${isLocal ? "muted" : ""} playsinline autoplay></video>
+      <div class="video-tile-label">
+        <span class="video-tile-name"></span>
+        <span class="video-tile-mic"><i class="bi bi-mic-fill"></i></span>
+      </div>
+      <span class="video-tile-host hidden">HOST</span>
+    `;
+    videoGrid.appendChild(tile);
+  }
 
-            micEnabled = false;
-            localStream.getAudioTracks().forEach((track) => {
-              track.enabled = false;
-            });
-            updateMediaButtons();
-            setStatus(`Muted by host ${by}.`);
-          });
+  const video = tile.querySelector("video");
+  if (video && video.srcObject !== stream) {
+    video.srcObject = stream;
+  }
+  if (video) {
+    video.muted = isLocal;
+    video.classList.toggle("local-video", isLocal);
+  }
 
-          socket.on("removed-by-host", ({ by }) => {
-            setStatus(`Removed by host ${by}.`);
-            leaveMeeting();
-          });
+  const nameEl = tile.querySelector(".video-tile-name");
+  if (nameEl) {
+    nameEl.textContent = name || getDisplayName(socketId);
+  }
 
-          socket.on("user-left", ({ socketId, username }) => {
-            const pc = peers.get(socketId);
-            if (pc) {
-              pc.close();
-            }
+  const micEl = tile.querySelector(".video-tile-mic");
+  if (micEl) {
+    micEl.classList.toggle("muted", Boolean(isMuted));
+    micEl.innerHTML = isMuted ? '<i class="bi bi-mic-mute-fill"></i>' : '<i class="bi bi-mic-fill"></i>';
+  }
 
-            peers.delete(socketId);
-            participants.delete(socketId);
-            removeRemoteStream(socketId);
-            removeVideoTile(socketId);
-            appendChatMessage({
-              username: "System",
-              text: `${username} left the meeting.`,
-              timestamp: Date.now(),
-            });
-          });
+  const hostEl = tile.querySelector(".video-tile-host");
+  if (hostEl) {
+    hostEl.classList.toggle("hidden", !isHost);
+  }
+}
 
-          socket.on("error-message", (message) => {
-            setStatus(message);
-          });
+function removeVideoTile(socketId) {
+  const tile = document.getElementById(`video-${socketId}`);
+  if (!tile) {
+    return;
+  }
 
-          socket.on("room-meta-updated", (roomMeta) => {
-            applyMeetingMeta(roomMeta);
-            if (roomMeta && roomMeta.hostSocketId && socket) {
-              setHostMode(roomMeta.hostSocketId === socket.id);
-            }
-          });
+  const video = tile.querySelector("video");
+  if (video) {
+    video.srcObject = null;
+  }
+  tile.remove();
+}
 
-          socket.on("lobby-wait", (payload) => {
-            hasJoinedRoom = false;
-            showLobby(payload || {});
-          });
+function removeRemoteStream(socketId) {
+  const stream = remoteStreams.get(socketId);
+  if (stream) {
+    stream.getTracks().forEach((track) => track.stop());
+  }
+  remoteStreams.delete(socketId);
+}
 
-          socket.on("join-rejected", (payload) => {
-            hasJoinedRoom = false;
-            showLobby(payload || { reason: "rejected-by-host" });
-          });
+async function ensureLocalMedia() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error("Media devices are not supported in this browser.");
+  }
 
-          socket.on("join-approved", () => {
-            hideLobby();
-            hasJoinedRoom = false;
-            setStatus("Host approved your request.", "success");
-          });
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+      },
+    });
 
-          socket.on("user-role-updated", ({ isHost }) => {
-            setHostMode(isHost);
-          });
+    try {
+      const trackInfo = localStream.getTracks().map((t) => ({ kind: t.kind, enabled: t.enabled, label: t.label }));
+      console.log('[MEDIA] localStream obtained', trackInfo);
+    } catch (e) {
+      console.log('[MEDIA] localStream obtained (could not enumerate tracks)', e);
+    }
+  } catch (err) {
+    console.error('[MEDIA] getUserMedia error:', err);
+    throw new Error(err && err.message ? `Unable to access media: ${err.message}` : 'Unable to access camera/microphone.');
+  }
 
-          socket.on("join-requests-updated", ({ requests }) => {
-            pendingJoinRequests = Array.isArray(requests) ? requests : [];
-            renderJoinRequests();
-          });
-        };
+  [cameraTrack] = localStream.getVideoTracks();
+  const [audioTrack] = localStream.getAudioTracks();
 
-        connectSocket();
-  // Avoid creating a second overlapping offer while negotiation is already in progress.
+  const defaultMicOn = true;
+  const defaultCamOn = localStorage.getItem("meetrecap.defaultCamOn") !== "false";
+
+  if (audioTrack) {
+    audioTrack.enabled = defaultMicOn;
+  }
+  else {
+    console.warn('[MEDIA] No audio track available on localStream');
+    setStatus('No microphone detected or access denied.', 'warning');
+  }
+
+  if (cameraTrack) {
+    cameraTrack.enabled = defaultCamOn;
+  }
+
+  micEnabled = audioTrack ? audioTrack.enabled : false;
+  camEnabled = cameraTrack ? cameraTrack.enabled : false;
+
+  addOrUpdateVideoTile(
+    "local",
+    localStream,
+    currentUser?.displayName || "You",
+    true,
+    false,
+    !micEnabled,
+  );
+}
+
+async function flushPendingCandidates(from, pc) {
+  const buffered = pendingCandidates.get(from);
+  if (!buffered || !buffered.length) {
+    return;
+  }
+
+  pendingCandidates.delete(from);
+  for (const candidate of buffered) {
+    try {
+      await pc.addIceCandidate(candidate);
+    } catch {
+      // Ignore stale candidate.
+    }
+  }
+}
+
+async function createPeerConnection(remoteSocketId) {
+  if (peers.has(remoteSocketId)) {
+    return peers.get(remoteSocketId);
+  }
+
+  const pc = new RTCPeerConnection(rtcConfig);
+  peers.set(remoteSocketId, pc);
+
+  if (localStream) {
+    localStream.getTracks().forEach((track) => {
+      pc.addTrack(track, localStream);
+    });
+  }
+
+  pc.onicecandidate = (event) => {
+    if (!event.candidate || !socket) {
+      return;
+    }
+    socket.emit("ice-candidate", {
+      to: remoteSocketId,
+      candidate: event.candidate,
+    });
+  };
+
+  pc.ontrack = (event) => {
+    const [incomingStream] = event.streams;
+    if (!incomingStream) {
+      return;
+    }
+
+    remoteStreams.set(remoteSocketId, incomingStream);
+    addOrUpdateVideoTile(remoteSocketId, incomingStream, getDisplayName(remoteSocketId));
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+      peers.delete(remoteSocketId);
+      removeRemoteStream(remoteSocketId);
+      removeVideoTile(remoteSocketId);
+    }
+  };
+
+  return pc;
+}
+
+async function callUser(remoteSocketId) {
+  if (!socket || !remoteSocketId) {
+    return;
+  }
+
+  const pc = await createPeerConnection(remoteSocketId);
   if (pc.signalingState !== "stable") {
     return;
   }
@@ -510,8 +1108,21 @@ async function replaceVideoTrackAcrossPeers(newTrack) {
 }
 
 function updateMediaButtons() {
-  // Visual states for icon buttons are handled by patchControlButtons() in meeting.html
-  // We only need to keep disabled state in sync
+  // Sync mic button visual state with actual micEnabled state
+  const micIcon = toggleMicBtn.querySelector('i');
+  const micTooltip = toggleMicBtn.querySelector('.ctrl-tooltip');
+  
+  if (micEnabled) {
+    toggleMicBtn.classList.remove('off');
+    if (micIcon) micIcon.className = 'bi bi-mic-fill';
+    if (micTooltip) micTooltip.textContent = 'Mute Mic';
+  } else {
+    toggleMicBtn.classList.add('off');
+    if (micIcon) micIcon.className = 'bi bi-mic-mute-fill';
+    if (micTooltip) micTooltip.textContent = 'Unmute Mic';
+  }
+
+  // Camera button disabled state when screen sharing
   if (!isScreenSharing) {
     toggleCamBtn.disabled = false;
   }
@@ -564,12 +1175,18 @@ function emitJoinRoom() {
   hasJoinedRoom = true;
 }
 
-function ensureSocketConnected() {
+async function ensureSocketConnected() {
   const token = getToken();
-  socket = io({
-    autoConnect: true,
-    auth: { token },
-  });
+  const socketUrl = await (window.getSocketUrl ? window.getSocketUrl() : Promise.resolve(""));
+  socket = socketUrl
+    ? io(socketUrl, {
+        autoConnect: true,
+        auth: { token },
+      })
+    : io({
+        autoConnect: true,
+        auth: { token },
+      });
 
   socket.on("connect", () => {
     hasJoinedRoom = false;
@@ -604,10 +1221,16 @@ function ensureSocketConnected() {
         // Collision or transient SDP failures are handled by incoming offer flow.
       }
     }
+
+    setTimeout(() => startSpeechRecognition(), 300);
   });
 
   socket.on("user-joined", async ({ socketId, username }) => {
     participants.set(socketId, { username });
+
+    if (socketId !== socket.id && getNotificationSetting("meetrecap.soundJoinLeave")) {
+      playNotificationBeep("join");
+    }
   });
 
   socket.on("offer", async ({ from, description }) => {
@@ -673,12 +1296,17 @@ function ensureSocketConnected() {
     appendChatMessage(message);
   });
 
+  socket.on("voice-transcript", (entry) => {
+    appendLiveTranscript(entry);
+  });
+
   socket.on("host-force-mute", ({ by }) => {
     if (!localStream) {
       return;
     }
 
     micEnabled = false;
+    stopSpeechRecognition();
     localStream.getAudioTracks().forEach((track) => {
       track.enabled = false;
     });
@@ -701,6 +1329,11 @@ function ensureSocketConnected() {
     participants.delete(socketId);
     removeRemoteStream(socketId);
     removeVideoTile(socketId);
+
+    if (socketId !== socket.id && getNotificationSetting("meetrecap.soundJoinLeave")) {
+      playNotificationBeep("leave");
+    }
+
     appendChatMessage({
       username: "System",
       text: `${username} left the meeting.`,
@@ -733,6 +1366,7 @@ function ensureSocketConnected() {
     hideLobby();
     hasJoinedRoom = false;
     setStatus("Host approved your request.", "success");
+    startSpeechRecognition();
   });
 
   socket.on("user-role-updated", ({ isHost }) => {
@@ -743,6 +1377,73 @@ function ensureSocketConnected() {
     pendingJoinRequests = Array.isArray(requests) ? requests : [];
     renderJoinRequests();
   });
+
+  socket.on("meeting-ended", async ({ recap }) => {
+    meetingEnded = true;
+    stopSpeechRecognition();
+    hideLobby();
+    hasJoinedRoom = true;
+    setStatus("The meeting has ended.", "info");
+
+    const latestRecap = recap || await fetchMeetingRecap();
+    if (latestRecap) {
+      renderMeetingRecap(latestRecap);
+    }
+
+    chatInput.disabled = true;
+    chatForm.querySelector("button[type='submit']")?.setAttribute("disabled", "disabled");
+    toggleMicBtn.disabled = true;
+    toggleCamBtn.disabled = true;
+    shareScreenBtn.disabled = true;
+    leaveBtn.classList.add("hidden");
+    endMeetingBtn?.classList.add("hidden");
+  });
+
+  socket.on("personal-recap", ({ recap }) => {
+    try {
+      currentPersonalRecap = recap || null;
+      renderPersonalRecap(currentPersonalRecap);
+    } catch (err) {
+      console.error("Failed to render personal recap:", err);
+    }
+  });
+}
+
+function renderPersonalRecap(recap) {
+  if (!recap || !meetingRecapOverlay) return;
+  meetingEnded = true;
+  currentMeetingRecap = recap;
+  if (endMeetingBtn) endMeetingBtn.classList.add("hidden");
+
+  if (recapTitle) recapTitle.textContent = `Your MOM for ${recap.title || currentMeetingTitle || currentRoomId}`;
+  if (recapSubtitle) recapSubtitle.textContent = `Left at ${new Date(recap.leftAt || Date.now()).toLocaleString()} • Duration ${formatDurationHuman(recap.durationMs)}`;
+
+  if (recapStats) {
+    recapStats.innerHTML = [`
+      <div class="recap-stat"><span>Duration</span><strong>${escHtml(formatDurationHuman(recap.durationMs))}</strong></div>
+      <div class="recap-stat"><span>Transcripts</span><strong>${escHtml(String(recap.summary?.transcriptCount || (recap.transcripts||[]).length))}</strong></div>
+      <div class="recap-stat"><span>Messages</span><strong>${escHtml(String(recap.summary?.chatCount || (recap.chatMessages||[]).length))}</strong></div>
+    `].join("");
+  }
+
+  if (recapParticipants) {
+    recapParticipants.innerHTML = `<div class="recap-item"><div><strong>${escHtml(recap.participant?.username || 'You')}</strong><p>${recap.participant?.isHost ? 'Host' : 'Member'}</p></div></div>`;
+  }
+
+  if (recapTranscript) {
+    recapTranscript.innerHTML = safeRecapList((recap.transcripts || []).map((t) => `
+      <div class="recap-item recap-log-item"><div><strong>${escHtml(t.username || '')}</strong><p>${escHtml(t.text || '')}</p></div><span>${formatRecapTime(t.timestamp)}</span></div>
+    `), 'No voice transcript was captured.');
+  }
+
+  if (recapChat) {
+    recapChat.innerHTML = safeRecapList((recap.chatMessages || []).map((m) => `
+      <div class="recap-item recap-log-item"><div><strong>${escHtml(m.username || '')}</strong><p>${escHtml(m.text || '')}</p></div><span>${formatRecapTime(m.timestamp)}</span></div>
+    `), 'No chat messages were captured.');
+  }
+
+  meetingRecapOverlay.classList.remove("hidden");
+  recapHighlights?.classList.remove("hidden");
 }
 
 async function recordMeetingHistory() {
@@ -765,6 +1466,8 @@ async function recordMeetingHistory() {
 async function leaveMeeting() {
   await recordMeetingHistory();
   hasJoinedRoom = false;
+  meetingEnded = true;
+  stopSpeechRecognition();
   stopLobbyCountdown();
   currentLobbyRetryAt = 0;
 
@@ -794,6 +1497,14 @@ async function leaveMeeting() {
   }
 
   window.location.replace("/dashboard");
+}
+
+async function endMeetingForEveryone() {
+  if (!socket || !isHostUser || meetingEnded) {
+    return;
+  }
+
+  socket.emit("end-meeting");
 }
 
 async function initializeMeeting() {
@@ -831,6 +1542,7 @@ async function initializeMeeting() {
   await loadRtcConfig();
   try {
     await ensureLocalMedia();
+    updateMediaButtons();
   } catch (error) {
     const secureHint = window.isSecureContext
       ? "Please allow camera and microphone permissions, then retry."
@@ -840,9 +1552,12 @@ async function initializeMeeting() {
     return;
   }
 
-  ensureSocketConnected();
+  await unlockNotificationAudio();
+
+  await ensureSocketConnected();
 
   renderChatEmpty();
+  renderLiveTranscriptEmpty();
   updateMediaButtons();
 }
 
@@ -866,6 +1581,13 @@ toggleMicBtn.addEventListener("click", () => {
   localStream.getAudioTracks().forEach((track) => {
     track.enabled = micEnabled;
   });
+
+  if (micEnabled && !meetingEnded) {
+    startSpeechRecognition();
+  } else {
+    stopSpeechRecognition();
+  }
+
   updateMediaButtons();
 });
 
@@ -891,14 +1613,22 @@ shareScreenBtn.addEventListener("click", async () => {
   }
 });
 
+if (languageSelector) {
+  languageSelector.value = HINDI_SPEECH_LANGUAGE;
+}
+
 leaveBtn.addEventListener("click", () => {
   leaveMeeting();
+});
+
+endMeetingBtn?.addEventListener("click", () => {
+  endMeetingForEveryone();
 });
 
 chatForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
-  if (!text || !socket) {
+  if (!text || !socket || meetingEnded) {
     return;
   }
 
@@ -927,6 +1657,16 @@ lobbyLeaveBtn?.addEventListener("click", () => {
   leaveMeeting();
 });
 
+viewHighlightsBtn?.addEventListener("click", showRecapHighlights);
+
+downloadRecapBtn?.addEventListener("click", () => {
+  downloadMeetingRecapPdf();
+});
+
+closeRecapBtn?.addEventListener("click", () => {
+  leaveMeeting();
+});
+
 window.addEventListener("beforeunload", () => {
   if (screenTrack) {
     screenTrack.stop();
@@ -934,6 +1674,7 @@ window.addEventListener("beforeunload", () => {
   if (meetingTimerInterval) {
     clearInterval(meetingTimerInterval);
   }
+  stopSpeechRecognition();
   stopLobbyCountdown();
 });
 

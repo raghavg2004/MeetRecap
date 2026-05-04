@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <meta name="theme-color" content="#080d1a" />
     <title>MeetRecap — Dashboard</title>
     <meta name="description" content="MeetRecap Dashboard — manage meetings, schedule, and history." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./style.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
   </head>
@@ -23,20 +26,19 @@
       <!-- Navbar -->
       <nav class="navbar">
         <a href="/dashboard" class="brand">
-          <div class="brand-orb">
-            <i class="bi bi-camera-video-fill" style="color:#fff;position:relative;z-index:1;font-size:0.9rem;"></i>
+          <div class="brand-orb dashboard-brand-orb">
+            <img src="/icon.png" alt="MeetRecap" class="brand-icon-img dashboard-brand-icon-img" />
           </div>
           <div class="brand-info">
-            <span class="brand-sub">Collaboration</span>
             <span class="brand-name">MeetRecap</span>
           </div>
         </a>
 
+        <!-- Mobile Menu Toggle -->
         <div class="navbar-end">
-          <!-- Mobile Menu Toggle -->
-          <button class="btn btn-icon" id="mobileMenuBtn" aria-label="Toggle menu">
+          <!--<button class="btn btn-icon" id="mobileMenuBtn" aria-label="Toggle menu">
             <i class="bi bi-list"></i>
-          </button>
+          </button>-->
 
           <div class="user-pill" id="userPill">
             <div class="avatar" id="userAvatar">U</div>
@@ -95,45 +97,70 @@
 
           <!-- ── Overview Section ───────────────────────── -->
           <section id="section-home" class="dash-section active">
-            <div class="section-header">
-              <p class="eyebrow">Dashboard</p>
-              <h2>Good to see you, <span class="grad-text" id="welcomeText">there</span> 👋</h2>
-              <p class="text-muted">Here's what's happening with your meetings today.</p>
-            </div>
+            <div class="card overview-hero">
+              <div class="overview-hero-glow"></div>
 
-            <!-- Quick Actions -->
-            <div class="card" style="margin-bottom:20px;">
-              <div class="card-title">Quick Actions</div>
-              <div class="card-desc" style="margin-bottom:16px;">Start or join a meeting instantly</div>
-              <div class="action-buttons">
-                <button id="createMeetingBtnOverview" class="btn btn-brand">
-                  <i class="bi bi-plus-circle-fill"></i> New Instant Meeting
+              <div class="overview-hero-content">
+                <h2>Welcome Back, <span id="welcomeText">there</span></h2>
+                <p class="overview-subtext">Start instantly, join with a code, or schedule ahead. Everything you need is right here.</p>
+              </div>
+
+              <div class="overview-command-grid">
+                <button id="createMeetingBtnOverview" class="btn overview-cmd overview-cmd-primary">
+                  <i class="bi bi-camera-video-fill"></i>
+                  <span>
+                    <strong>Start Instant Meeting</strong>
+                    <small>Launch now and share link</small>
+                  </span>
                 </button>
-                <button class="btn btn-secondary" data-section="join" id="goToJoinBtn">
-                  <i class="bi bi-arrow-right-circle"></i> Join by ID
+
+                <button class="btn overview-cmd" data-section="join" id="goToJoinBtn">
+                  <i class="bi bi-box-arrow-in-right"></i>
+                  <span>
+                    <strong>Join by ID</strong>
+                    <small>Enter code and connect</small>
+                  </span>
                 </button>
-                <button class="btn btn-secondary" data-section="schedule" id="goToScheduleBtn">
-                  <i class="bi bi-calendar-plus"></i> Schedule Meeting
+
+                <button class="btn overview-cmd" data-section="schedule" id="goToScheduleBtn">
+                  <i class="bi bi-calendar2-plus"></i>
+                  <span>
+                    <strong>Schedule Meeting</strong>
+                    <small>Plan and invite in advance</small>
+                  </span>
                 </button>
               </div>
             </div>
 
-            <!-- Upcoming Meetings mini view -->
-            <div class="card">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                <div class="card-title">Upcoming Meetings</div>
-                <button class="btn btn-ghost" style="font-size:0.8rem;" data-section="schedule" id="seeAllScheduled">
-                  See All <i class="bi bi-arrow-right"></i>
-                </button>
+            <div class="overview-panels">
+              <div class="card overview-upcoming">
+                <div class="overview-panel-head">
+                  <div>
+                    <p class="eyebrow">Planner</p>
+                    <div class="card-title">Upcoming Meetings</div>
+                  </div>
+                  <button class="btn btn-ghost" style="font-size:0.8rem;" data-section="schedule" id="seeAllScheduled">
+                    See All <i class="bi bi-arrow-right"></i>
+                  </button>
+                </div>
+                <div id="overviewScheduledList" class="meeting-list"></div>
               </div>
-              <div id="overviewScheduledList" class="meeting-list"></div>
+
+              <div class="card overview-side-note">
+                <p class="eyebrow">Flow</p>
+                <h3>Daily Meeting Workflow</h3>
+                <ul class="overview-flow-list">
+                  <li><i class="bi bi-check2-circle"></i> Start a room and share link instantly</li>
+                  <li><i class="bi bi-check2-circle"></i> Join teammate sessions via Meeting ID</li>
+                  <li><i class="bi bi-check2-circle"></i> Pre-schedule sessions for team sync</li>
+                </ul>
+              </div>
             </div>
           </section>
 
           <!-- ── Join / Start Section ───────────────────── -->
           <section id="section-join" class="dash-section">
             <div class="section-header">
-              <p class="eyebrow">Meetings</p>
               <h2>Join or Start</h2>
               <p class="text-muted">Create an instant meeting or enter a Meeting ID to join.</p>
             </div>
@@ -178,7 +205,6 @@
           <!-- ── Schedule Section ───────────────────────── -->
           <section id="section-schedule" class="dash-section">
             <div class="section-header">
-              <p class="eyebrow">Planning</p>
               <h2>Schedule a Meeting</h2>
               <p class="text-muted">Set a date and time for your next meeting.</p>
             </div>
@@ -221,48 +247,217 @@
           <!-- ── History Section ────────────────────────── -->
           <section id="section-history" class="dash-section">
             <div class="section-header">
-              <p class="eyebrow">Activity</p>
               <h2>Meeting History</h2>
-              <p class="text-muted">Your recent meeting activity and durations.</p>
+              <p class="text-muted">Your recent meeting activity, MOM recaps, and downloadable records.</p>
             </div>
 
-            <div class="card">
-              <div id="historyList" class="meeting-list"></div>
+            <div class="dash-grid history-grid">
+              <div class="card">
+                <div class="card-title" style="margin-bottom:16px;">Meeting Activity</div>
+                <div id="historyList" class="meeting-list"></div>
+              </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom:16px;">Recap History (MOM)</div>
+                <div id="recapHistoryList" class="meeting-list"></div>
+                <div id="recapPreview" class="recap-preview-panel"></div>
+              </div>
             </div>
           </section>
 
           <!-- ── Settings Section ───────────────────────── -->
           <section id="section-settings" class="dash-section">
             <div class="section-header">
-              <p class="eyebrow">Preferences</p>
               <h2>Settings</h2>
               <p class="text-muted">Customize your MeetRecap experience.</p>
             </div>
 
-            <div class="card">
-              <div class="card-title" style="margin-bottom:16px;">Video Preferences</div>
-              <div class="settings-rows">
-                <label class="settings-row" for="mirrorToggle">
-                  <div class="settings-row-info">
-                    <strong>Mirror Self-View</strong>
-                    <p>Flip your own camera preview horizontally (does not affect others).</p>
+            <div class="settings-layout">
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">1. Profile and Identity</div>
+                <div class="settings-rows">
+                  <div class="settings-row" style="align-items:flex-start;gap:12px;">
+                    <div class="settings-row-info">
+                      <strong>Display Name</strong>
+                      <p>Update how your name appears on dashboard and meeting tiles.</p>
+                    </div>
+                    <div class="form-group" style="min-width:220px;">
+                      <input id="displayNameInput" type="text" maxlength="24" placeholder="Your display name" autocomplete="off" />
+                    </div>
                   </div>
-                  <span class="switch">
-                    <input id="mirrorToggle" type="checkbox" />
-                    <span class="slider"></span>
-                  </span>
-                </label>
 
-                <div class="settings-row">
-                  <div class="settings-row-info">
-                    <strong>Theme</strong>
-                    <p>Switch between dark and light appearance for the dashboard.</p>
-                  </div>
-                  <button id="themeToggleBtn" type="button" class="btn btn-secondary btn-theme">
-                    Dark Theme
-                  </button>
+                  <!--<div class="settings-row" style="align-items:flex-start;gap:12px;">
+                    <div class="settings-row-info">
+                      <strong>Profile Photo / Avatar</strong>
+                      <p>Upload a profile image shown on the dashboard avatar.</p>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+                      <input id="avatarUploadInput" type="file" accept="image/*" />
+                      <button id="clearAvatarBtn" type="button" class="btn btn-ghost" style="font-size:0.78rem;">Clear Photo</button>
+                    </div>
+                  </div>-->
                 </div>
               </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">2. Audio and Video Defaults</div>
+                <div class="settings-rows">
+                  <label class="settings-row" for="defaultMicToggle">
+                    <div class="settings-row-info">
+                      <strong>Mic On by Default</strong>
+                      <p>Enable microphone automatically when joining a meeting.</p>
+                    </div>
+                    <span class="switch">
+                      <input id="defaultMicToggle" type="checkbox" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+
+                  <label class="settings-row" for="defaultCamToggle">
+                    <div class="settings-row-info">
+                      <strong>Camera On by Default</strong>
+                      <p>Enable camera automatically when joining a meeting.</p>
+                    </div>
+                    <span class="switch">
+                      <input id="defaultCamToggle" type="checkbox" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+
+                  <label class="settings-row" for="mirrorToggle">
+                    <div class="settings-row-info">
+                      <strong>Mirror Self-View</strong>
+                      <p>Flip your own camera preview horizontally (does not affect others).</p>
+                    </div>
+                    <span class="switch">
+                      <input id="mirrorToggle" type="checkbox" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">3. Notifications</div>
+                <div class="settings-rows">
+                  <label class="settings-row" for="notifyJoinLeaveToggle">
+                    <div class="settings-row-info">
+                      <strong>Sound on User Join/Leave</strong>
+                      <p>Play a short beep when participants join or leave.</p>
+                    </div>
+                    <span class="switch">
+                      <input id="notifyJoinLeaveToggle" type="checkbox" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+
+                  <label class="settings-row" for="notifyChatToggle">
+                    <div class="settings-row-info">
+                      <strong>Chat Message Sound</strong>
+                      <p>Play a sound when new chat arrives in meetings.</p>
+                    </div>
+                    <span class="switch">
+                      <input id="notifyChatToggle" type="checkbox" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+
+                  <div class="settings-row">
+                    <div class="settings-row-info">
+                      <strong>Desktop Meeting Reminders</strong>
+                      <p>Show browser notification before scheduled meetings.</p>
+                    </div>
+                    <span class="switch">
+                      <input id="desktopRemindersToggle" type="checkbox" />
+                      <span class="slider"></span>
+                    </span>
+                  </div>
+
+                  <div class="settings-row" style="align-items:flex-start;gap:12px;">
+                    <div class="settings-row-info">
+                      <strong>Reminder Timing</strong>
+                      <p>Choose how early reminder notification should appear.</p>
+                    </div>
+                    <div class="segmented-buttons" id="reminderTimingButtons" role="group" aria-label="Reminder Timing">
+                      <button type="button" class="seg-btn" data-value="5">5 min</button>
+                      <button type="button" class="seg-btn" data-value="10">10 min</button>
+                      <button type="button" class="seg-btn" data-value="15">15 min</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">4. Appearance and Accessibility</div>
+                <div class="settings-rows">
+                  <div class="settings-row" style="align-items:flex-start;gap:12px;">
+                    <div class="settings-row-info">
+                      <strong>Theme Preset</strong>
+                      <p>Choose between dark, light, or system appearance.</p>
+                    </div>
+                    <div class="segmented-buttons" id="themePresetButtons" role="group" aria-label="Theme Preset">
+                      <button type="button" class="seg-btn" data-value="dark">Dark</button>
+                      <button type="button" class="seg-btn" data-value="light">Light</button>
+                      <button type="button" class="seg-btn" data-value="system">System</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">5. Security and Account</div>
+                <div class="settings-rows">
+                  <div class="settings-row">
+                    <div class="settings-row-info">
+                      <strong>Change Password</strong>
+                      <p>Update your account password securely.</p>
+                    </div>
+                    <button id="changePasswordBtn" type="button" class="btn btn-secondary">Change Password</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-title" style="margin-bottom:12px;">Help and Legal</div>
+                <div class="settings-rows">
+                  <div class="settings-row settings-action-row" data-settings-action="about" role="button" tabindex="0" aria-label="Open About">
+                    <div class="settings-row-info">
+                      <strong>6. About</strong>
+                      <p>Know what MeetRecap does and who it is for.</p>
+                    </div>
+                  </div>
+
+                  <div class="settings-row settings-action-row" data-settings-action="privacy" role="button" tabindex="0" aria-label="Open Privacy Policy">
+                    <div class="settings-row-info">
+                      <strong>7. Privacy Policy</strong>
+                      <p>Read how your data is handled.</p>
+                    </div>
+                  </div>
+
+                  <div class="settings-row settings-action-row" data-settings-action="terms" role="button" tabindex="0" aria-label="Open Terms and Conditions">
+                    <div class="settings-row-info">
+                      <strong>8. Terms and Conditions</strong>
+                      <p>Review app usage terms and responsibilities.</p>
+                    </div>
+                  </div>
+
+                  <div class="settings-row settings-action-row" data-settings-action="faq" role="button" tabindex="0" aria-label="Open FAQs">
+                    <div class="settings-row-info">
+                      <strong>9. FAQs</strong>
+                      <p>Find quick answers to common questions.</p>
+                    </div>
+                  </div>
+
+                  <div class="settings-row settings-action-row" data-settings-action="ask-question" role="button" tabindex="0" aria-label="Ask a Question">
+                    <div class="settings-row-info">
+                      <strong>10. Ask a Question</strong>
+                      <p>Open a support prompt and copy your question for follow-up.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <p id="settingsStatusText" class="status mt-16"></p>
             </div>
           </section>
 
@@ -312,6 +507,67 @@
           <div class="dialog-actions">
             <button type="button" id="meetingTitleDialogCancel" class="btn btn-secondary">Cancel</button>
             <button type="button" id="meetingTitleDialogConfirm" class="btn btn-brand">Start Meeting</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="settingsInfoDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settingsInfoDialogHeading">
+        <div class="dialog-card" role="document">
+          <div class="dialog-head">
+            <p class="eyebrow">Information</p>
+            <h3 id="settingsInfoDialogHeading">Details</h3>
+            <p id="settingsInfoDialogDescription" class="text-muted">Read details below.</p>
+          </div>
+          <div id="settingsInfoDialogBody" class="settings-info-body"></div>
+          <div class="dialog-actions">
+            <button type="button" id="settingsInfoDialogClose" class="btn btn-secondary">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="changePasswordDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="changePasswordDialogHeading">
+        <div class="dialog-card" role="document">
+          <div class="dialog-head">
+            <p class="eyebrow">Security</p>
+            <h3 id="changePasswordDialogHeading">Change Password</h3>
+            <p class="text-muted">For this demo app, password update is saved in your local browser profile.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="newPasswordInput">New Password</label>
+            <input id="newPasswordInput" type="password" minlength="6" maxlength="64" placeholder="Enter new password" autocomplete="new-password" />
+          </div>
+
+          <div class="form-group mt-8">
+            <label class="form-label" for="confirmPasswordInput">Confirm Password</label>
+            <input id="confirmPasswordInput" type="password" minlength="6" maxlength="64" placeholder="Confirm password" autocomplete="new-password" />
+            <p id="changePasswordStatus" class="status"></p>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="button" id="changePasswordCancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="changePasswordConfirm" class="btn btn-brand">Save Password</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="askQuestionDialog" class="dialog-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="askQuestionDialogHeading">
+        <div class="dialog-card" role="document">
+          <div class="dialog-head">
+            <p class="eyebrow">Support</p>
+            <h3 id="askQuestionDialogHeading">Ask a Question</h3>
+            <p class="text-muted">Type your question below and send it directly to support from your account.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="askQuestionInput">Your Question</label>
+            <textarea id="askQuestionInput" rows="5" maxlength="1000" placeholder="Write your question or feedback here..."></textarea>
+            <p id="askQuestionStatus" class="status"></p>
+          </div>
+
+          <div class="dialog-actions">
+            <button type="button" id="askQuestionCancel" class="btn btn-secondary">Cancel</button>
+            <button type="button" id="askQuestionSend" class="btn btn-brand">Send Query</button>
           </div>
         </div>
       </div>

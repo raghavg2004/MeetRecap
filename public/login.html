@@ -3,11 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <meta name="theme-color" content="#080d1a" />
     <title>MeetRecap — Sign In</title>
     <meta name="description" content="Sign in to MeetRecap — the premium multi-user video collaboration platform." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./style.css" />
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
@@ -31,7 +34,7 @@
         <!-- Brand -->
         <div class="login-brand">
           <div class="brand-orb">
-            <i class="bi bi-camera-video-fill" style="color:#fff;font-size:1rem;position:relative;z-index:1;"></i>
+            <img src="/icon.png" alt="MeetRecap" class="brand-icon-img" />
           </div>
           <div class="brand-info">
             <span class="brand-sub">Video Collaboration</span>
@@ -115,6 +118,17 @@
               </div>
             </div>
 
+            <label class="consent-row" for="registerConsent">
+              <input id="registerConsent" type="checkbox" required />
+              <span>
+                I agree to the
+                <button type="button" class="policy-link" id="openPrivacyPolicy">Privacy Policy</button>
+                and
+                <button type="button" class="policy-link" id="openTermsConditions">Terms and Conditions</button>
+                before creating my account.
+              </span>
+            </label>
+
             <button type="submit" class="btn btn-brand w-full" id="registerSubmitBtn" style="margin-top:6px;">
               <div class="spinner"></div>
               <span class="btn-text"><i class="bi bi-person-check"></i>&nbsp; Create Account</span>
@@ -128,9 +142,44 @@
         <!-- Feature Badges -->
         <div class="login-features">
           <div class="feature-badge"><span><i class="bi bi-shield-lock-fill"></i></span> End-to-End Secure</div>
-          <div class="feature-badge"><span><i class="bi bi-people-fill"></i></span> Up to 12 Participants</div>
+          <div class="feature-badge"><span><i class="bi bi-people-fill"></i></span> Up to 100 Participants</div>
           <div class="feature-badge"><span><i class="bi bi-calendar-check"></i></span> Schedule Meetings</div>
           <div class="feature-badge"><span><i class="bi bi-chat-dots-fill"></i></span> Live Chat</div>
+        </div>
+
+        <div id="privacyModal" class="policy-modal hidden" role="dialog" aria-modal="true" aria-labelledby="privacyModalTitle">
+          <div class="policy-modal-card">
+            <div class="policy-modal-head">
+              <p class="eyebrow">Privacy Policy</p>
+              <h3 id="privacyModalTitle">Privacy Policy</h3>
+            </div>
+            <div class="policy-modal-body">
+              <p>MeetRecap stores your sign-in session and app preferences in your browser or the connected backend for core functionality.</p>
+              <p>Do not share sensitive information in public meetings, chat, or shared links. For production use, add encryption, access controls, and a full privacy compliance review.</p>
+            </div>
+            <div class="policy-modal-actions">
+              <button type="button" class="btn btn-secondary" id="closePrivacyPolicy">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="termsModal" class="policy-modal hidden" role="dialog" aria-modal="true" aria-labelledby="termsModalTitle">
+          <div class="policy-modal-card">
+            <div class="policy-modal-head">
+              <p class="eyebrow">Terms and Conditions</p>
+              <h3 id="termsModalTitle">Terms and Conditions</h3>
+            </div>
+            <div class="policy-modal-body">
+              <ul>
+                <li>Use the app respectfully and lawfully.</li>
+                <li>Do not abuse meeting access or disrupt calls.</li>
+                <li>You are responsible for content you share with others.</li>
+              </ul>
+            </div>
+            <div class="policy-modal-actions">
+              <button type="button" class="btn btn-secondary" id="closeTermsConditions">Close</button>
+            </div>
+          </div>
         </div>
 
       </div>

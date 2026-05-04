@@ -1,82 +1,80 @@
 # MeetRecap
 
-MeetRecap is a login-first multi-user video calling platform with a dashboard for creating, joining, scheduling, and tracking meetings.
+MeetRecap is a login-first multi-user video meeting prototype with live captions and downloadable meeting recaps (MOM PDFs).
 
-## Features
+This README reflects the current workflow, debugging additions, and PDF rendering fixes applied during development.
 
-- Login and register flow
-- Dashboard after login
-- Instant meetings with host approval
-- Meeting links with scheduled lobby gating
-- Schedule upcoming meetings
-- Meeting history tracking
-- JWT + session authentication
-- Multi-user video/audio with WebRTC
-- Mic/camera controls and screen sharing
-- In-meeting realtime chat
-- Responsive mobile-first UI
+**Key capabilities**
+- WebRTC peer-to-peer video + audio (mesh) with mic/camera controls and screen sharing
+- Socket.IO signaling and realtime chat
+- Browser-side speech recognition (Web Speech API) for live captions in English and Hindi
+- Meeting recaps (MOM) saved and downloadable as PDF (PDFs now embed a Devanagari-capable font for correct Hindi rendering)
 
-## Tech Stack
+**Important fixes / notes made recently**
+- Added debug logging around getUserMedia to help diagnose microphone/permission issues.
+- Browser speech recognition is used for live transcripts (Chrome/Edge recommended).
+- PDF generator now embeds `assets/fonts/NotoSansDevanagari.ttf` (falls back to Windows fonts when available) so Hindi (Devanagari) text renders correctly in PDFs.
+- Removed an unavailable `sanscript` dependency; transliteration to Hinglish was not added to avoid introducing a broken package.
 
+## Tech stack
 - Node.js + Express
-- Socket.IO for signaling
-- WebRTC for peer-to-peer media
-- HTML/CSS/JavaScript frontend
+- Socket.IO
+- WebRTC (browser APIs)
+- PDF generation with `pdfkit`
+- Frontend: plain HTML/CSS/JS
 
-## Local Setup
+## Quick start (local)
+1. Clone the repo and open the project folder.
 
-1. Install dependencies:
+2. Install dependencies:
 
-   npm install
-
-2. Start the server:
-
-   npm start
-
-3. Open in browser:
-
-   http://localhost:3000
-
-## Production Configuration
-
-Environment variables used by the app:
-
-- PORT: HTTP port, default `3000`
-- MAX_ROOM_SIZE: max participants per room, default `12`
-- ALLOWED_ORIGIN: allowed Socket.IO origin
-- SESSION_SECRET: secret for session signing
-- JWT_SECRET: secret for JWT signing
-- JWT_EXPIRES_IN: token expiry, default `12h`
-- TURN_URL: TURN server URL, for example `turn:turn.example.com:3478`
-- TURN_USERNAME: TURN username
-- TURN_CREDENTIAL: TURN credential/secret
-
-## Deployment Notes
-
-Deploy this app on any Node.js host that supports WebSockets (for example Render, Railway, Fly.io, or VPS).
-
-Recommended setup:
-
-1. Run the Node server from this repository.
-2. Set environment variables as needed:
-   - `PORT`
-   - `ALLOWED_ORIGIN`
-   - `SESSION_SECRET`
-   - `JWT_SECRET`
-   - `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` (optional, for TURN)
-3. Ensure your host allows persistent WebSocket connections for Socket.IO.
-
-## Push to GitHub
-
-```bash
-git remote add origin https://github.com/raghavg2004/MeetRecap.git
-git branch -M main
-git push -u origin main
+```powershell
+cd "C:\Users\Raghav\Desktop\Multi-Videocall"
+npm install
 ```
 
-## Notes
+Notes for Windows: some optional native modules (used by transitive deps) may require the Visual Studio "Desktop development with C++" workload for `node-gyp` builds. If `npm install` fails with `node-gyp` errors, either install the required build tools or run the app on WSL/Linux where builds are easier.
 
-- Current authentication, schedule, and history storage are in-memory for this project scaffold.
-- For true production persistence, connect users/rooms/meetings to a database and shared cache.
-- This uses a mesh WebRTC architecture, suitable for small groups.
-- For larger meetings, use an SFU such as mediasoup, Janus, or Jitsi.
+3. Start the server:
+
+```powershell
+npm start
+```
+
+4. Open the app in a Chromium-based browser (Chrome or Edge) for best speech recognition support:
+
+```
+http://localhost:3000
+```
+
+If running the server remotely, use an HTTPS URL (or tunnel via ngrok) so browser media permissions work correctly.
+
+## Testing live captions and PDF recap
+- Join/create a meeting and allow camera/microphone when prompted.
+- Open DevTools Console and look for messages prefixed with `[MEDIA]` and `[STT]` (added debug logs).
+- Speak in Hindi (Devanagari) or English — live captions should appear in the meeting UI.
+- End/leave the meeting and download the MOM PDF from the UI; Hindi text should render correctly in the PDF due to the embedded Devanagari font.
+
+## Configuration (env)
+Set environment variables as appropriate for production:
+- `PORT` — HTTP port (default 3000)
+- `MAX_ROOM_SIZE` — max participants in a room (default 12)
+- `ALLOWED_ORIGIN` — Socket.IO allowed origin
+- `SESSION_SECRET`, `JWT_SECRET`, `JWT_EXPIRES_IN`
+- `GMAIL_USER` and `GMAIL_APP_PASSWORD` — optional for sending personal recap emails via Gmail
+- `TURN_URL`, `TURN_USERNAME`, `TURN_CREDENTIAL` — optional TURN server settings for NAT traversal
+
+## Troubleshooting
+- If you see no audio capture: ensure you allowed microphone permission, use localhost or HTTPS, and check DevTools console for `[MEDIA]` logs.
+- If browser speech recognition is not supported: use Chrome or Edge; Firefox does not fully support the Web Speech API.
+- If `npm install` fails with `node-gyp`/`ffi-napi` errors on Windows: install Visual Studio Build Tools or run on WSL/Linux.
+- If PDF contains garbled characters for Hindi: confirm `assets/fonts/NotoSansDevanagari.ttf` exists and server restarted after the change; the app now prefers this bundled font.
+
+## Development notes & next steps
+- Consider adding an optional UI toggle to switch between original Devanagari and Latin (Hinglish) transliteration.
+- For scale, replace mesh WebRTC with an SFU (mediasoup/jitsi) and persist recaps in a database.
+
+---
+
+If you want, I can also add a short troubleshooting panel in the meeting UI that displays microphone track status and speech recognition state. Tell me if you'd like that added.
+

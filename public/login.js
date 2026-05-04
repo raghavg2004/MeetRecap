@@ -8,10 +8,17 @@ const loginPassword  = document.getElementById('loginPassword');
 const registerName   = document.getElementById('registerName');
 const registerEmail  = document.getElementById('registerEmail');
 const registerPassword = document.getElementById('registerPassword');
+const registerConsent = document.getElementById('registerConsent');
 const tabSignIn      = document.getElementById('tabSignIn');
 const tabRegister    = document.getElementById('tabRegister');
 const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 const registerSubmitBtn = document.getElementById('registerSubmitBtn');
+const openPrivacyPolicy = document.getElementById('openPrivacyPolicy');
+const openTermsConditions = document.getElementById('openTermsConditions');
+const privacyModal = document.getElementById('privacyModal');
+const termsModal = document.getElementById('termsModal');
+const closePrivacyPolicy = document.getElementById('closePrivacyPolicy');
+const closeTermsConditions = document.getElementById('closeTermsConditions');
 
 /* ── Status ─────────────────────────────────────────────── */
 function setStatus(message, type = 'error') {
@@ -79,6 +86,35 @@ function setLoading(btn, loading) {
   btn.disabled = loading;
 }
 
+function openModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.remove('hidden');
+}
+
+function closeModal(modalEl) {
+  if (!modalEl) return;
+  modalEl.classList.add('hidden');
+}
+
+openPrivacyPolicy?.addEventListener('click', () => openModal(privacyModal));
+openTermsConditions?.addEventListener('click', () => openModal(termsModal));
+closePrivacyPolicy?.addEventListener('click', () => closeModal(privacyModal));
+closeTermsConditions?.addEventListener('click', () => closeModal(termsModal));
+
+privacyModal?.addEventListener('click', (e) => {
+  if (e.target === privacyModal) closeModal(privacyModal);
+});
+
+termsModal?.addEventListener('click', (e) => {
+  if (e.target === termsModal) closeModal(termsModal);
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  closeModal(privacyModal);
+  closeModal(termsModal);
+});
+
 /* ── Login ──────────────────────────────────────────────── */
 loginForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -102,6 +138,12 @@ loginForm.addEventListener('submit', async (e) => {
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   setStatus('');
+
+  if (!registerConsent?.checked) {
+    setStatus('Please accept the Privacy Policy and Terms and Conditions to create an account.');
+    return;
+  }
+
   setLoading(registerSubmitBtn, true);
   try {
     const data = await apiRequest('/api/auth/register', 'POST', {
