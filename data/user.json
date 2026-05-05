@@ -250,6 +250,20 @@
     "createdAt": 1777527119638,
     "meetingHistory": [
       {
+        "id": "b365de02-612a-4d32-ac58-93ed3bd165e2",
+        "roomId": "XSNN-3103",
+        "title": "Meeting XSNN-3103",
+        "durationMs": 95999
+      },
+      {
+        "id": "f116b92e-d807-4f0f-aba5-e773bad80932",
+        "roomId": "XSNN-3103",
+        "title": "pal",
+        "joinedAt": 1777975634358,
+        "leftAt": 1777975730330,
+        "durationMs": 95972
+      },
+      {
         "id": "1e73bdc3-9f1d-46d0-bef8-2501184ac436",
         "roomId": "YJTX-9797",
         "title": "Meeting YJTX-9797",
@@ -584,20 +598,6 @@
         "roomId": "HUB8-3725",
         "title": "Meeting HUB8-3725",
         "durationMs": 50323
-      },
-      {
-        "id": "c037edab-21b7-410d-b00b-e1ea9f152846",
-        "roomId": "HUB8-3725",
-        "title": "Meeting HUB8-3725",
-        "joinedAt": 1777541426509,
-        "leftAt": 1777541447365,
-        "durationMs": 20856
-      },
-      {
-        "id": "a2122340-185d-4df8-95ed-06563b05ab14",
-        "roomId": "55Z9-9723",
-        "title": "Meeting 55Z9-9723",
-        "durationMs": 66754
       }
     ]
   },
@@ -699,6 +699,29 @@
         "joinedAt": 1777705821554,
         "leftAt": 1777705836235,
         "durationMs": 14681
+      }
+    ]
+  },
+  {
+    "id": "17810bb2-36ef-4edd-a900-15844b1d15c9",
+    "email": "hydrapal018@gmail.com",
+    "displayName": "Pal Hydra",
+    "passwordHash": "$2a$12$nxtv2cZRWtuXVrQj.e7/quIdvm8dXXaa/usJoeXSCTc9kHAOW1KcO",
+    "createdAt": 1777975580407,
+    "meetingHistory": [
+      {
+        "id": "db0efd8a-8891-457f-a462-55ebae7cdc64",
+        "roomId": "XSNN-3103",
+        "title": "Meeting XSNN-3103",
+        "durationMs": 125610
+      },
+      {
+        "id": "592fc6b2-84d2-4788-bfa8-c9b128bbbe74",
+        "roomId": "XSNN-3103",
+        "title": "Meeting XSNN-3103",
+        "joinedAt": 1777975705435,
+        "leftAt": 1777975757532,
+        "durationMs": 52097
       }
     ]
   }

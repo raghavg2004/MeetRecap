@@ -33,6 +33,16 @@ if (-not $hasOrigin) {
 # Ensure branch name
 git branch -M $Branch
 
+# Fetch and try to integrate remote changes (rebase)
+Write-Host "Fetching origin and attempting 'git pull --rebase origin $Branch'..."
+git fetch origin
+$pullResult = git pull --rebase origin $Branch 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Pull/rebase failed or conflicts occurred:`n$pullResult"
+    Write-Host "Please resolve conflicts manually, then run 'git rebase --continue' and push. Aborting automatic push."
+    exit 1
+}
+
 # Push
 Write-Host "Pushing to $RemoteUrl on branch $Branch..."
 try {
