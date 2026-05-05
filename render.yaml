@@ -3,7 +3,7 @@ services:
     name: meetrecap
     env: node
     plan: free
-    buildCommand: npm install --no-optional
+    buildCommand: npm ci --prefer-offline --no-audit --legacy-peer-deps
     startCommand: npm start
     envVars:
       - key: NODE_ENV
