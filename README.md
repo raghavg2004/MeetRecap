@@ -1,4 +1,4 @@
-# MeetRecap
+# MeetRecap - Smart Video Meeting & AI Recap Platform
 
 MeetRecap is a login-first multi-user video meeting prototype with live captions and downloadable meeting recaps (MOM PDFs).
 
