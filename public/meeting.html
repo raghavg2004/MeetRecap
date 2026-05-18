@@ -3,8 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MeetRecap" />
     <link rel="icon" type="image/png" href="/icon.png" />
     <link rel="apple-touch-icon" href="/icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#080d1a" />
     <title>MeetRecap — Meeting</title>
     <meta name="description" content="MeetRecap live meeting room." />
@@ -235,6 +239,7 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="./runtime-config.js"></script>
+    <script src="./pwa-init.js"></script>
     <script src="./meeting.js"></script>
     <script>
       /* ── Meeting UI enhancements ── */

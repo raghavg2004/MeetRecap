@@ -15,6 +15,12 @@
     "createdAt": 1777526758106,
     "meetingHistory": [
       {
+        "id": "3ea5d8a3-5ae0-43e1-b2ae-ace95a318903",
+        "roomId": "MFYA-7464",
+        "title": "Meeting MFYA-7464",
+        "durationMs": 43527
+      },
+      {
         "id": "afb45950-ef64-4fe5-b1bf-894d37df0cc4",
         "roomId": "V0AN-7587",
         "title": "Meeting V0AN-7587",
@@ -97,51 +103,7 @@
       {
         "id": "da15fd04-a982-49f8-aa7e-af93a36377c2",
         "roomId": "VZ63-1938",
-        "title": "ft1",
-        "joinedAt": 1777879961005,
-        "leftAt": 1777879999124,
-        "durationMs": 38119
-      },
-      {
-        "id": "31758fa8-f9f4-472b-a8fd-0b6ae560e38d",
-        "roomId": "91XD-8828",
-        "title": "Meeting 91XD-8828",
-        "durationMs": 24643
-      },
-      {
-        "id": "9ae360d2-d35f-4070-96ce-f00e85281d3f",
-        "roomId": "GM9V-8605",
-        "title": "Meeting GM9V-8605",
-        "durationMs": 49187
-      },
-      {
-        "id": "06bccde7-92f7-46aa-94f9-f9a7d75d377f",
-        "roomId": "IDYF-2590",
-        "title": "Meeting IDYF-2590",
-        "durationMs": 36487
-      },
-      {
-        "id": "a5e34ca6-84db-466b-9be2-4aaf59b38e3c",
-        "roomId": "IDYF-2590",
-        "title": "Instant Meeting",
-        "joinedAt": 1777560186270,
-        "leftAt": 1777560222696,
-        "durationMs": 36426
-      },
-      {
-        "id": "a07a40b2-8321-4ed6-bd99-ecb22922ddae",
-        "roomId": "5U5C-2825",
-        "title": "Meeting 5U5C-2825",
-        "durationMs": 4005
-      },
-      {
-        "id": "5f41655e-a5dd-4008-b079-6ad96c2b4457",
-        "roomId": "5U5C-2825",
-        "title": "Instant Meeting",
-        "joinedAt": 1777559575786,
-        "leftAt": 1777559579266,
-        "durationMs": 3480
-      },
+        []
       {
         "id": "cfcfef66-840f-4424-90c7-9299b761b5ca",
         "roomId": "HUB8-3725",
@@ -249,6 +211,96 @@
     "passwordHash": "$2a$12$7IHDk.roy2BLMvSadzSreOOY7cbHMBjPkjcxTzvXRg2YO0UWCd/q.",
     "createdAt": 1777527119638,
     "meetingHistory": [
+      {
+        "id": "0789517b-e7b5-46a7-92b4-78ae10dd3dc7",
+        "roomId": "GUQH-4982",
+        "title": "Meeting GUQH-4982",
+        "durationMs": 41087
+      },
+      {
+        "id": "34c4cede-5ac7-4d98-8835-ce24c37663fe",
+        "roomId": "LAZG-8779",
+        "title": "Meeting LAZG-8779",
+        "durationMs": 88574
+      },
+      {
+        "id": "dde039a3-89a7-4093-8bd3-18038a4ce737",
+        "roomId": "LAZG-8779",
+        "title": "Instant Meeting",
+        "joinedAt": 1779096411342,
+        "leftAt": 1779096499850,
+        "durationMs": 88508
+      },
+      {
+        "id": "5bb31b44-d643-4d5a-85e0-2897abfab635",
+        "roomId": "90N3-2717",
+        "title": "Meeting 90N3-2717",
+        "durationMs": 171050
+      },
+      {
+        "id": "b7966f44-ac77-4e5d-a80b-c1e3aa5e5e39",
+        "roomId": "90N3-2717",
+        "title": "Instant Meeting",
+        "joinedAt": 1779096065333,
+        "leftAt": 1779096236305,
+        "durationMs": 170972
+      },
+      {
+        "id": "292d6d3b-21e5-418e-9c10-cb5ce6a3c1ac",
+        "roomId": "EP1D-2572",
+        "title": "Meeting EP1D-2572",
+        "durationMs": 139601
+      },
+      {
+        "id": "86c7f0d2-541a-4d54-8d5e-27329988d4a2",
+        "roomId": "EP1D-2572",
+        "title": "Instant Meeting",
+        "joinedAt": 1778087987765,
+        "leftAt": 1778088127330,
+        "durationMs": 139565
+      },
+      {
+        "id": "5490a8c7-743f-4058-a384-a3de671a039a",
+        "roomId": "1I6Z-5092",
+        "title": "Meeting 1I6Z-5092",
+        "durationMs": 336827
+      },
+      {
+        "id": "1769e844-89bc-4085-988b-725686ef75cb",
+        "roomId": "1I6Z-5092",
+        "title": "Instant Meeting",
+        "joinedAt": 1778087354704,
+        "leftAt": 1778087691473,
+        "durationMs": 336769
+      },
+      {
+        "id": "fb649f28-07f7-49d7-bc87-6b722ef513eb",
+        "roomId": "3G2N-4740",
+        "title": "Meeting 3G2N-4740",
+        "durationMs": 45353
+      },
+      {
+        "id": "7e965085-9180-4c83-856e-8c271a6afad8",
+        "roomId": "3G2N-4740",
+        "title": "Instant Meeting",
+        "joinedAt": 1778087299585,
+        "leftAt": 1778087344903,
+        "durationMs": 45318
+      },
+      {
+        "id": "61d74386-646a-4b63-ae42-796d9a09ea2b",
+        "roomId": "Z19B-6292",
+        "title": "Meeting Z19B-6292",
+        "durationMs": 9766
+      },
+      {
+        "id": "ffc4b021-7b39-40ce-aeae-b70123fda472",
+        "roomId": "Z19B-6292",
+        "title": "Instant Meeting",
+        "joinedAt": 1777994163438,
+        "leftAt": 1777994172823,
+        "durationMs": 9385
+      },
       {
         "id": "b365de02-612a-4d32-ac58-93ed3bd165e2",
         "roomId": "XSNN-3103",
@@ -508,96 +560,6 @@
         "joinedAt": 1777624413333,
         "leftAt": 1777624436671,
         "durationMs": 23338
-      },
-      {
-        "id": "6495293f-965a-4a6c-b235-4f31290279c9",
-        "roomId": "NTA8-4614",
-        "title": "Meeting NTA8-4614",
-        "durationMs": 33446
-      },
-      {
-        "id": "ec394041-ae10-4295-abd0-c3890fd8de23",
-        "roomId": "NTA8-4614",
-        "title": "Instant Meeting",
-        "joinedAt": 1777623772889,
-        "leftAt": 1777623806318,
-        "durationMs": 33429
-      },
-      {
-        "id": "1bba5f23-443e-4ddf-95d0-326220c14cf9",
-        "roomId": "T8G5-9051",
-        "title": "Meeting T8G5-9051",
-        "durationMs": 14073
-      },
-      {
-        "id": "4946a29c-cd9f-4d72-98bc-83cd4c643f6b",
-        "roomId": "T8G5-9051",
-        "title": "Instant Meeting",
-        "joinedAt": 1777623739448,
-        "leftAt": 1777623753105,
-        "durationMs": 13657
-      },
-      {
-        "id": "5adf449b-f9ad-4ba5-9d74-38bd9370690b",
-        "roomId": "D41D-5519",
-        "title": "Meeting D41D-5519",
-        "durationMs": 27319
-      },
-      {
-        "id": "4f094c7d-1175-473c-ba12-3e7fb197c47b",
-        "roomId": "D41D-5519",
-        "title": "Instant Meeting",
-        "joinedAt": 1777622491072,
-        "leftAt": 1777622518330,
-        "durationMs": 27258
-      },
-      {
-        "id": "862f8d29-5165-4428-862c-e75b6e2cdd24",
-        "roomId": "L9W2-8380",
-        "title": "Meeting L9W2-8380",
-        "durationMs": 20594
-      },
-      {
-        "id": "688c1ce9-9abd-4472-8375-aab4e51ee6f0",
-        "roomId": "L9W2-8380",
-        "title": "Instant Meeting",
-        "joinedAt": 1777622447726,
-        "leftAt": 1777622468255,
-        "durationMs": 20529
-      },
-      {
-        "id": "c9f2da8e-7b65-45f9-9bc6-7bf2df700e73",
-        "roomId": "IDYF-2590",
-        "title": "Meeting IDYF-2590",
-        "durationMs": 38425
-      },
-      {
-        "id": "00863de8-5109-474e-a3b1-59d7eb80c4b3",
-        "roomId": "IDYF-2590",
-        "title": "Meeting IDYF-2590",
-        "joinedAt": 1777560199400,
-        "leftAt": 1777560224451,
-        "durationMs": 25051
-      },
-      {
-        "id": "b7fab196-2bb4-4eea-9c3e-c510efd68930",
-        "roomId": "AIL3-2181",
-        "title": "Meeting AIL3-2181",
-        "durationMs": 52633
-      },
-      {
-        "id": "4fc74760-3a30-4ff6-940f-5dea8d3e5c49",
-        "roomId": "AIL3-2181",
-        "title": "Instant Meeting",
-        "joinedAt": 1777541452598,
-        "leftAt": 1777541504919,
-        "durationMs": 52321
-      },
-      {
-        "id": "78e83459-ec1c-4a9e-864a-843e1d9813e0",
-        "roomId": "HUB8-3725",
-        "title": "Meeting HUB8-3725",
-        "durationMs": 50323
       }
     ]
   },
@@ -722,6 +684,21 @@
         "joinedAt": 1777975705435,
         "leftAt": 1777975757532,
         "durationMs": 52097
+      }
+    ]
+  },
+  {
+    "id": "0322dc72-a7ae-45ce-b7fa-6982ca733509",
+    "email": "raghavgupta98sdnfj880@gmail.com",
+    "displayName": "Gupt",
+    "passwordHash": "$2a$12$g9Ncaol7Jty0DdgHhKxDIe0lBNB91ewG7byOA1eo579mlDcw7HbnO",
+    "createdAt": 1779096305366,
+    "meetingHistory": [
+      {
+        "id": "cb650ce8-54fc-4cac-9ad1-28b05916b6af",
+        "roomId": "GUQH-4982",
+        "title": "Meeting GUQH-4982",
+        "durationMs": 41201
       }
     ]
   }

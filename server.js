@@ -122,6 +122,36 @@ app.use(
     },
   }),
 );
+
+// ──── PWA Configuration ────────────────────────────────────────────
+// Set MIME type for manifest.json
+app.use((req, res, next) => {
+  if (req.url === '/manifest.json') {
+    res.type('application/manifest+json');
+  }
+  // Set cache control headers
+  if (req.url === '/service-worker.js') {
+    // Service workers should not be cached too long to ensure updates
+    res.setHeader('Cache-Control', 'max-age=3600, public');
+    res.type('application/javascript');
+  } else if (req.url === '/manifest.json') {
+    res.setHeader('Cache-Control', 'max-age=86400, public');
+  } else if (req.url.match(/\.(js|css|png|jpg|gif|svg|woff|woff2|ttf|eot)$/)) {
+    // Cache static assets for 1 week
+    res.setHeader('Cache-Control', 'max-age=604800, public');
+  } else if (req.url.match(/\.(html)$/)) {
+    // HTML files: cache for 1 hour to allow fresh content
+    res.setHeader('Cache-Control', 'max-age=3600, public, must-revalidate');
+  }
+  
+  // PWA Headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  next();
+});
+
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/", (req, res) => {
