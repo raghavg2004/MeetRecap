@@ -1725,9 +1725,6 @@ app.post(
     return ct.startsWith("audio/") || ct === "application/octet-stream";
   }, limit: "25mb" }),
   async (req, res) => {
-    res.status(410).json({ error: "Server transcription is disabled. Use the browser Web Speech API." });
-    return;
-
     const roomId = sanitizeMeetingId(req.params?.roomId);
     if (!roomId) {
       res.status(400).json({ error: "Invalid meeting ID." });
