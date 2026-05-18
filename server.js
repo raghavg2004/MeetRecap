@@ -34,7 +34,7 @@ let vosk_recognizers = new Map();
 const app = express();
 const server = http.createServer(app);
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
 const MAX_ROOM_SIZE = Number(process.env.MAX_ROOM_SIZE || 12);
 const DATA_DIR = path.join(__dirname, "data");
 const DEVANAGARI_PDF_FONT_PATH = path.join(__dirname, "assets", "fonts", "NotoSansDevanagari.ttf");
