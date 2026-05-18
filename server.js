@@ -77,6 +77,7 @@ function configureRecapPdfFonts(doc) {
 }
 const USERS_FILE = path.join(DATA_DIR, "user.json");
 const LEGACY_USERS_FILE = path.join(DATA_DIR, "users.json");
+const AUTH_TOKEN_COOKIE = "meetrecap_auth";
 const SESSION_SECRET = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret-change-me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "12h";
@@ -424,19 +425,62 @@ function sanitizeMeetingTitle(title) {
   return cleaned.replace(/[<>]/g, "");
 }
 
+function parseCookies(headerValue) {
+  const cookies = new Map();
+  const raw = String(headerValue || "");
+  if (!raw) {
+    return cookies;
+  }
+
+  raw.split(";").forEach((pair) => {
+    const index = pair.indexOf("=");
+    if (index <= 0) {
+      return;
+    }
+
+    const key = pair.slice(0, index).trim();
+    const value = pair.slice(index + 1).trim();
+    if (!key) {
+      return;
+    }
+
+    try {
+      cookies.set(key, decodeURIComponent(value));
+    } catch {
+      cookies.set(key, value);
+    }
+  });
+
+  return cookies;
+}
+
+function getUserFromJwtToken(token) {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return usersById.get(decoded.sub) || null;
+  } catch {
+    return null;
+  }
+}
+
 function getRequestAuthUser(req) {
   const bearer = req.headers.authorization;
   if (bearer && bearer.startsWith("Bearer ")) {
     const token = bearer.slice(7);
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const user = usersById.get(decoded.sub);
-      if (user) {
-        return user;
-      }
-    } catch {
-      return null;
+    const user = getUserFromJwtToken(token);
+    if (user) {
+      return user;
     }
+  }
+
+  const cookieToken = parseCookies(req.headers.cookie || "").get(AUTH_TOKEN_COOKIE);
+  const cookieUser = getUserFromJwtToken(cookieToken);
+  if (cookieUser) {
+    return cookieUser;
   }
 
   if (req.session?.userId) {
@@ -1450,9 +1494,17 @@ app.post("/api/auth/register", async (req, res) => {
   }
 
   req.session.userId = user.id;
+  const token = issueToken(user);
+  res.cookie(AUTH_TOKEN_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 1000 * 60 * 60 * 24,
+    path: "/",
+  });
 
   res.status(201).json({
-    token: issueToken(user),
+    token,
     user: publicUser(user),
   });
 });
@@ -1479,8 +1531,16 @@ app.post("/api/auth/login", async (req, res) => {
   }
 
   req.session.userId = user.id;
+  const token = issueToken(user);
+  res.cookie(AUTH_TOKEN_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 1000 * 60 * 60 * 24,
+    path: "/",
+  });
   res.json({
-    token: issueToken(user),
+    token,
     user: publicUser(user),
   });
 });
@@ -1545,6 +1605,12 @@ app.post("/api/send-email", requireAuth, async (req, res) => {
 });
 
 app.post("/api/auth/logout", (req, res) => {
+  res.clearCookie(AUTH_TOKEN_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+  });
   req.session.destroy(() => {
     res.json({ ok: true });
   });
@@ -1823,20 +1889,18 @@ app.get("/config", (req, res) => {
 });
 
 io.use((socket, next) => {
-  const token = socket.handshake.auth?.token;
-  if (!token || typeof token !== "string") {
+  const authToken = typeof socket.handshake.auth?.token === "string"
+    ? socket.handshake.auth.token
+    : "";
+  const cookieToken = parseCookies(socket.handshake.headers?.cookie || "").get(AUTH_TOKEN_COOKIE) || "";
+  const user = getUserFromJwtToken(authToken) || getUserFromJwtToken(cookieToken);
+
+  if (!user) {
     next(new Error("Authentication required."));
     return;
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = usersById.get(decoded.sub);
-    if (!user) {
-      next(new Error("Invalid auth token."));
-      return;
-    }
-
     socket.data.authUser = {
       id: user.id,
       email: user.email,
