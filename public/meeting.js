@@ -596,8 +596,58 @@ function formatDurationHuman(durationMs) {
 }
 
 function getApiPath(path) {
-  return (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(""))
-    .then((apiBaseUrl) => (apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path));
+  return resolveApiUrl(path);
+}
+
+async function getConfiguredApiBaseUrl() {
+  try {
+    const apiBaseUrl = await (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(""));
+    const raw = String(apiBaseUrl || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const parsed = new URL(raw, window.location.origin);
+    if (window.location.protocol === "https:" && parsed.protocol === "http:") {
+      return "";
+    }
+
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+async function resolveApiUrl(path) {
+  const apiBaseUrl = await getConfiguredApiBaseUrl();
+  return apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
+}
+
+async function fetchWithApiFallback(path, options = {}) {
+  const primaryUrl = await resolveApiUrl(path);
+  const canFallback = primaryUrl !== path;
+
+  try {
+    const response = await fetch(primaryUrl, options);
+    if (canFallback && !response.ok && [401, 403, 404, 410, 500, 502, 503].includes(response.status)) {
+      try {
+        const retryResponse = await fetch(path, options);
+        if (retryResponse.ok) {
+          return retryResponse;
+        }
+      } catch {
+        // Keep original response.
+      }
+    }
+
+    return response;
+  } catch (error) {
+    if (!canFallback) {
+      throw error;
+    }
+
+    return fetch(path, options);
+  }
 }
 
 function safeRecapList(items, emptyText) {
@@ -944,8 +994,6 @@ function applyMirrorPreference() {
 }
 
 async function apiRequest(path, method = "GET", body = null) {
-  const apiBaseUrl = await (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(""));
-  const url = apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
   const token = getToken();
   const headers = {};
   if (token) {
@@ -955,7 +1003,7 @@ async function apiRequest(path, method = "GET", body = null) {
     headers["Content-Type"] = "application/json";
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithApiFallback(path, {
     method,
     headers,
     credentials: "include",
@@ -972,9 +1020,7 @@ async function apiRequest(path, method = "GET", body = null) {
 
 async function loadRtcConfig() {
   try {
-    const apiBaseUrl = await (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(""));
-    const configUrl = apiBaseUrl ? new URL("/config", apiBaseUrl).toString() : "/config";
-    const response = await fetch(configUrl);
+    const response = await fetchWithApiFallback("/config");
     if (!response.ok) {
       return;
     }

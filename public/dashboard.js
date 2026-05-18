@@ -281,14 +281,63 @@ function openInfoDialog(title, description, bodyHtml) {
 }
 
 /* ── API ─────────────────────────────────────────────────── */
+async function getConfiguredApiBaseUrl() {
+  try {
+    const apiBaseUrl = await (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(''));
+    const raw = String(apiBaseUrl || '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    const parsed = new URL(raw, window.location.origin);
+    if (window.location.protocol === 'https:' && parsed.protocol === 'http:') {
+      return '';
+    }
+
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+async function resolveApiUrl(path) {
+  const apiBaseUrl = await getConfiguredApiBaseUrl();
+  return apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
+}
+
+async function fetchWithApiFallback(path, options = {}) {
+  const primaryUrl = await resolveApiUrl(path);
+  const canFallback = primaryUrl !== path;
+
+  try {
+    const response = await fetch(primaryUrl, options);
+    if (canFallback && !response.ok && [401, 403, 404, 410, 500, 502, 503].includes(response.status)) {
+      try {
+        const retryResponse = await fetch(path, options);
+        if (retryResponse.ok) {
+          return retryResponse;
+        }
+      } catch {
+        // Keep original response.
+      }
+    }
+
+    return response;
+  } catch (error) {
+    if (!canFallback) {
+      throw error;
+    }
+
+    return fetch(path, options);
+  }
+}
+
 async function apiRequest(path, method = 'GET', body = null) {
-  const apiBaseUrl = await (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(''));
-  const url = apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
   const token = getToken();
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body) headers['Content-Type'] = 'application/json';
-  const res = await fetch(url, {
+  const res = await fetchWithApiFallback(path, {
     method,
     headers,
     credentials: 'include',
@@ -567,7 +616,6 @@ async function downloadMeetingRecapPdfByRoom(roomId) {
     throw new Error('Invalid meeting ID for recap download.');
   }
 
-  const apiBaseUrl = await (window.getApiBaseUrl ? window.getApiBaseUrl() : Promise.resolve(''));
   const token = getToken();
   const headers = {};
   if (token) {
@@ -575,8 +623,7 @@ async function downloadMeetingRecapPdfByRoom(roomId) {
   }
 
   const path = `/api/meetings/${encodeURIComponent(safeRoomId)}/recap.pdf`;
-  const url = apiBaseUrl ? new URL(path, apiBaseUrl).toString() : path;
-  const response = await fetch(url, {
+  const response = await fetchWithApiFallback(path, {
     method: 'GET',
     headers,
     credentials: 'include',

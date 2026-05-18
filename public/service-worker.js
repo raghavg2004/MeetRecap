@@ -1,7 +1,7 @@
 // MeetRecap Service Worker
-const CACHE_NAME = 'meetrecap-v2';
-const STATIC_CACHE = 'meetrecap-static-v2';
-const DYNAMIC_CACHE = 'meetrecap-dynamic-v2';
+const CACHE_NAME = 'meetrecap-v3';
+const STATIC_CACHE = 'meetrecap-static-v3';
+const DYNAMIC_CACHE = 'meetrecap-dynamic-v3';
 
 // Files to cache on install
 const STATIC_ASSETS = [
@@ -62,6 +62,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Let browser/CDN handle cross-origin requests directly.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // These endpoints must always be fresh in PWA mode.
+  if (
+    url.pathname === '/api/app-config' ||
+    url.pathname === '/config' ||
+    url.pathname.startsWith('/api/auth/') ||
+    url.pathname === '/service-worker.js'
+  ) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   // API calls - network first, then cache
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/socket')) {
     event.respondWith(
@@ -70,7 +86,7 @@ self.addEventListener('fetch', event => {
           // Clone the response
           const clonedResponse = response.clone();
           
-          // Cache successful responses
+          // Cache successful responses for non-auth/config APIs.
           if (response.ok) {
             caches.open(DYNAMIC_CACHE).then(cache => {
               cache.put(request, clonedResponse);
@@ -101,16 +117,12 @@ self.addEventListener('fetch', event => {
         })
     );
   } 
-  // Static assets - cache first, then network
+  // Static assets - stale-while-revalidate
   else {
     event.respondWith(
       caches.match(request)
         .then(cachedResponse => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          
-          return fetch(request)
+          const networkFetch = fetch(request)
             .then(response => {
               // Don't cache non-successful responses
               if (!response || response.status !== 200 || response.type === 'error') {
@@ -141,6 +153,12 @@ self.addEventListener('fetch', event => {
                   });
                 });
             });
+
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+
+          return networkFetch;
         })
     );
   }
