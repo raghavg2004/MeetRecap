@@ -1,5 +1,5 @@
-<h1 style="display:flex; align-items:center; gap:16px;">
-	<img src="public/icon.png" alt="MeetRecap" width="100" />
+<h1 style="display:flex; align-items:center; gap:12px;">
+	<img src="/icon.png" alt="MeetRecap" style="height:1em; width:auto; display:inline-block;" />
 	<span>MeetRecap - Smart Video Meeting &amp; AI Recap Platform with PWA</span>
 </h1>
 
@@ -7,13 +7,13 @@ MeetRecap is a login-first multi-user video meeting prototype with live captions
 
 This README reflects the current workflow, debugging additions, and PDF rendering fixes applied during development.
 
-**Key capabilities**
+## Key capabilities
 - WebRTC peer-to-peer video + audio (mesh) with mic/camera controls and screen sharing
 - Socket.IO signaling and realtime chat
 - Browser-side speech recognition (Web Speech API) for live captions in English and Hindi
 - Meeting recaps (MOM) saved and downloadable as PDF (PDFs now embed a Devanagari-capable font for correct Hindi rendering)
 
-**Important fixes / notes made recently**
+## Important fixes / notes made recently
 - Added debug logging around getUserMedia to help diagnose microphone/permission issues.
 - Browser speech recognition is used for live transcripts (Chrome/Edge recommended).
 - PDF generator now embeds `assets/fonts/NotoSansDevanagari.ttf` (falls back to Windows fonts when available) so Hindi (Devanagari) text renders correctly in PDFs.
