@@ -81,11 +81,4 @@ Set environment variables as appropriate for production:
 - If `npm install` fails with `node-gyp`/`ffi-napi` errors on Windows: install Visual Studio Build Tools or run on WSL/Linux.
 - If PDF contains garbled characters for Hindi: confirm `assets/fonts/NotoSansDevanagari.ttf` exists and server restarted after the change; the app now prefers this bundled font.
 
-## Development notes & next steps
-- Consider adding an optional UI toggle to switch between original Devanagari and Latin (Hinglish) transliteration.
-- For scale, replace mesh WebRTC with an SFU (mediasoup/jitsi) and persist recaps in a database.
-
 ---
-
-If you want, I can also add a short troubleshooting panel in the meeting UI that displays microphone track status and speech recognition state. Tell me if you'd like that added.
-
