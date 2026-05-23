@@ -1,5 +1,5 @@
 <h1 style="display:flex; align-items:center; gap:12px;">
-	<img src="/icon.png" alt="MeetRecap" style="height:1em; width:auto; display:inline-block;" />
+	<img src="public/icon.png" alt="MeetRecap" style="height:1em; width:auto; display:inline-block;" />
 	<span>MeetRecap - Smart Video Meeting &amp; AI Recap Platform with PWA</span>
 </h1>
 
