@@ -1,5 +1,5 @@
 {
-  "name": "multi-videocall",
+  "name": "meetrecap",
   "version": "1.0.0",
   "description": "Multi-user WebRTC video calling with meeting IDs",
   "main": "server.js",

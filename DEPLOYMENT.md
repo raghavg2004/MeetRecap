@@ -12,14 +12,14 @@ Deploy MeetRecap to a public server with HTTPS in 10 minutes.
 ### 1. Push Your Project to GitHub
 ```bash
 # Initialize git (if not already done)
-cd "C:\Users\Raghav\Desktop\Multi-Videocall"
+cd "C:\Users\Raghav\Desktop\MeetRecap"
 git init
 git add .
 git commit -m "Initial commit: MeetRecap video calling app"
 
 # Create repo on GitHub at https://github.com/new
 # Then push:
-git remote add origin https://github.com/YOUR_USERNAME/Multi-Videocall.git
+git remote add origin https://github.com/YOUR_USERNAME/MeetRecap.git
 git branch -M main
 git push -u origin main
 ```
@@ -32,7 +32,7 @@ git push -u origin main
 
 ### 3. Deploy Your App
 1. Click **New +** → **Web Service**
-2. Select your **Multi-Videocall** repository
+2. Select your **MeetRecap** repository
 3. Configure:
    - **Name:** `meetrecap` (or your preferred name)
    - **Environment:** Node

@@ -73,19 +73,23 @@ let transcriptRetryArmed = false;
 let speechRecognitionWatchdogInterval = null;
 let speechUnsupportedNotified = false;
 let forcedTranscriptLanguage = "";
-let fallbackTranscriptionRecorder = null;
-let fallbackTranscriptionActive = false;
-let fallbackTranscriptionPending = false;
-let fallbackTranscriptionMimeType = "";
+// Browser-only speech-to-text: no server fallback path is wired.
+const ONLY_BROWSER_STT = true;
 
 const HINDI_SPEECH_LANGUAGE = "hi-IN";
+const ENGLISH_SPEECH_LANGUAGE = "en-US";
 
 if (languageSelector && !languageSelector.value) {
-  languageSelector.value = HINDI_SPEECH_LANGUAGE;
+  languageSelector.value = ENGLISH_SPEECH_LANGUAGE;
 }
 
 function getPreferredTranscriptLanguage() {
-  return HINDI_SPEECH_LANGUAGE;
+  if (languageSelector && languageSelector.value) {
+    const val = languageSelector.value.toLowerCase();
+    if (val.startsWith("hi")) return "hi";
+    return "en";
+  }
+  return "en";
 }
 
 function getSpeechRecognitionCtor() {
@@ -93,11 +97,15 @@ function getSpeechRecognitionCtor() {
 }
 
 function getSpeechRecognitionLanguage() {
-  return HINDI_SPEECH_LANGUAGE;
+  if (languageSelector && languageSelector.value) {
+    return languageSelector.value;
+  }
+  return ENGLISH_SPEECH_LANGUAGE;
 }
 
 function getSpeechLanguageLabel(language) {
-  return "हिंदी (Hindi)";
+  if (language && language.toLowerCase().startsWith("hi")) return "हिंदी (Hindi)";
+  return "English";
 }
 
 function sanitizeTranscriptText(text) {
@@ -137,176 +145,18 @@ function emitSpeechTranscript(text) {
   });
 }
 
-function getFallbackTranscriptionMimeType() {
-  if (typeof MediaRecorder === "undefined" || typeof MediaRecorder.isTypeSupported !== "function") {
-    return "";
-  }
-
-  const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4",
-  ];
-
-  for (const candidate of candidates) {
-    if (MediaRecorder.isTypeSupported(candidate)) {
-      return candidate;
-    }
-  }
-
-  return "";
-}
-
-async function sendFallbackTranscriptionChunk(blob, mimeType) {
-  if (!blob || blob.size === 0 || !currentRoomId || meetingEnded || fallbackTranscriptionPending) {
+function scheduleSpeechRecognitionRestart(delayMs = 300) {
+  if (!speechRecognitionShouldListen || meetingEnded || !micEnabled || !localStream || !currentRoomId) {
     return;
   }
 
-  fallbackTranscriptionPending = true;
-  try {
-    const url = await getApiPath(`/api/meetings/${encodeURIComponent(currentRoomId)}/transcribe`);
-    const body = await blob.arrayBuffer();
-    const token = getToken();
-    const headers = {
-      "Content-Type": mimeType || blob.type || "audio/webm",
-      "X-Transcript-Language": getPreferredTranscriptLanguage(),
-    };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      credentials: "include",
-      body,
-    });
-
-    if (!response.ok) {
-      let message = `Server transcription failed (${response.status}).`;
-      try {
-        const payload = await response.json();
-        if (payload && payload.error) {
-          message = String(payload.error);
-        }
-      } catch {
-        // Ignore payload parse errors.
-      }
-
-      console.log("[STT] Fallback transcription error:", response.status, message);
-      setStatus(message, "warning");
-
-      if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 410) {
-        speechRecognitionShouldListen = false;
-        stopFallbackTranscription();
-      }
-    }
-  } catch (error) {
-    console.log("[STT] Failed to send fallback transcription chunk:", error);
-  } finally {
-    fallbackTranscriptionPending = false;
-  }
-}
-
-function stopFallbackTranscription() {
-  fallbackTranscriptionPending = false;
-  fallbackTranscriptionActive = false;
-
-  if (!fallbackTranscriptionRecorder) {
-    return;
-  }
-
-  const recorder = fallbackTranscriptionRecorder;
-  fallbackTranscriptionRecorder = null;
-
-  try {
-    recorder.ondataavailable = null;
-    recorder.onerror = null;
-    recorder.onstop = null;
-    if (recorder.state !== "inactive") {
-      recorder.stop();
-    }
-  } catch {
-    // Ignore teardown errors.
-  }
-}
-
-function startFallbackTranscription() {
-  if (fallbackTranscriptionActive || meetingEnded || !micEnabled || !localStream || !currentRoomId) {
-    return;
-  }
-
-  if (typeof MediaRecorder === "undefined") {
-    setStatus("Speech recognition is unavailable on this device/browser.", "info");
-    return;
-  }
-
-  const audioTracks = localStream.getAudioTracks().filter((track) => track.enabled);
-  if (!audioTracks.length) {
-    return;
-  }
-
-  let audioOnlyStream;
-  try {
-    audioOnlyStream = new MediaStream(audioTracks);
-  } catch {
-    audioOnlyStream = localStream;
-  }
-
-  const mimeType = getFallbackTranscriptionMimeType();
-  let recorder;
-  try {
-    recorder = mimeType
-      ? new MediaRecorder(audioOnlyStream, { mimeType, audioBitsPerSecond: 32000 })
-      : new MediaRecorder(audioOnlyStream);
-  } catch (error) {
-    console.log("[STT] Failed to create fallback MediaRecorder:", error);
-    setStatus("Unable to initialize fallback transcription.", "info");
-    return;
-  }
-
-  speechRecognitionShouldListen = true;
-  fallbackTranscriptionMimeType = mimeType || recorder.mimeType || "audio/webm";
-  fallbackTranscriptionRecorder = recorder;
-  fallbackTranscriptionActive = true;
-  fallbackTranscriptionPending = false;
-  startSpeechRecognitionWatchdog();
-
-  recorder.ondataavailable = (event) => {
-    if (!speechRecognitionShouldListen || meetingEnded) {
+  window.setTimeout(() => {
+    if (!speechRecognitionShouldListen || meetingEnded || !micEnabled || !localStream || !currentRoomId) {
       return;
     }
 
-    if (!event?.data || event.data.size === 0) {
-      return;
-    }
-
-    sendFallbackTranscriptionChunk(event.data, fallbackTranscriptionMimeType);
-  };
-
-  recorder.onerror = (event) => {
-    console.log("[STT] Fallback recorder error:", event?.error || event);
-    setStatus("Fallback transcription encountered an error.", "warning");
-  };
-
-  recorder.onstop = () => {
-    fallbackTranscriptionActive = false;
-    fallbackTranscriptionRecorder = null;
-
-    if (speechRecognitionShouldListen && !meetingEnded && micEnabled) {
-      setTimeout(() => startFallbackTranscription(), 500);
-    }
-  };
-
-  try {
-    recorder.start(3500);
-    setStatus("Using server transcription fallback.", "info");
-  } catch (error) {
-    fallbackTranscriptionActive = false;
-    fallbackTranscriptionRecorder = null;
-    console.log("[STT] Failed to start fallback recorder:", error);
-    setStatus("Unable to start fallback transcription.", "warning");
-  }
+    startSpeechRecognition();
+  }, delayMs);
 }
 
 let rtcConfig = {
@@ -810,7 +660,6 @@ function stopSpeechRecognition() {
   speechRecognitionActive = false;
   transcriptRetryArmed = false;
   stopSpeechRecognitionWatchdog();
-  stopFallbackTranscription();
   speechRecognitionSessionId += 1;
 
   if (speechRecognition) {
@@ -841,7 +690,7 @@ function startSpeechRecognitionWatchdog() {
       return;
     }
 
-    if (!speechRecognitionActive && !fallbackTranscriptionActive) {
+    if (!speechRecognitionActive) {
       startSpeechRecognition();
     }
   }, 10000);
@@ -873,18 +722,19 @@ function armTranscriptRetryOnInteraction() {
 }
 
 function startSpeechRecognition() {
-  if (speechRecognitionActive || fallbackTranscriptionActive || meetingEnded || !micEnabled || !localStream || !currentRoomId) {
-    console.log("[STT] startSpeechRecognition guard:", { speechRecognitionActive, fallbackTranscriptionActive, meetingEnded, micEnabled, localStream: !!localStream, currentRoomId });
+  if (speechRecognitionActive || meetingEnded || !micEnabled || !localStream || !currentRoomId) {
+    console.log("[STT] startSpeechRecognition guard:", { speechRecognitionActive, meetingEnded, micEnabled, localStream: !!localStream, currentRoomId });
     return;
   }
 
   const SpeechRecognitionCtor = getSpeechRecognitionCtor();
   if (!SpeechRecognitionCtor) {
     if (!speechUnsupportedNotified) {
-      setStatus("Browser speech recognition is unavailable here. Switching to server transcription.", "info");
+      setStatus("Browser speech recognition is unavailable in this browser.", "warning");
       speechUnsupportedNotified = true;
     }
-    startFallbackTranscription();
+    speechRecognitionShouldListen = false;
+    armTranscriptRetryOnInteraction();
     return;
   }
 
@@ -926,28 +776,35 @@ function startSpeechRecognition() {
 
       const error = String(event?.error || "");
       if (error === "no-speech" || error === "aborted") {
+        if (speechRecognitionShouldListen && !meetingEnded && micEnabled) {
+          scheduleSpeechRecognitionRestart(200);
+        }
         return;
       }
 
       if (error === "not-allowed" || error === "service-not-allowed" || error === "audio-capture") {
-        setStatus("Speech recognition was blocked or unavailable. Trying fallback transcription.", "info");
-        stopSpeechRecognition();
-        if (error !== "not-allowed") {
-          startFallbackTranscription();
-        } else {
+        setStatus("Speech recognition was blocked or unavailable.", "warning");
+        speechRecognitionActive = false;
+        speechRecognition = null;
+        speechRecognitionShouldListen = false;
+        if (error === "not-allowed") {
           armTranscriptRetryOnInteraction();
         }
         return;
       }
 
       if (error === "network" || error === "language-not-supported") {
-        setStatus("Browser speech recognition is unstable. Switching to server transcription.", "info");
-        stopSpeechRecognition();
-        startFallbackTranscription();
+        setStatus("Browser speech recognition is unstable.", "warning");
+        speechRecognitionActive = false;
+        speechRecognition = null;
+        scheduleSpeechRecognitionRestart(500);
         return;
       }
 
       setStatus(`Speech recognition error: ${error || "unknown"}`, "warning");
+      speechRecognitionActive = false;
+      speechRecognition = null;
+      scheduleSpeechRecognitionRestart(400);
     };
 
     recognition.onend = () => {
@@ -970,12 +827,10 @@ function startSpeechRecognition() {
   } catch (error) {
     speechRecognitionActive = false;
     speechRecognition = null;
-    speechRecognitionShouldListen = false;
-    speechRecognitionSessionId += 1;
     console.log("[STT] Failed to start browser speech recognition:", error);
-    setStatus("Unable to start browser speech recognition. Trying server fallback.", "info");
-    startFallbackTranscription();
+    setStatus("Unable to start browser speech recognition.", "warning");
     armTranscriptRetryOnInteraction();
+    scheduleSpeechRecognitionRestart(1000);
   }
 }
 
@@ -1849,8 +1704,14 @@ shareScreenBtn.addEventListener("click", async () => {
   }
 });
 
+// Language selector: restart STT when user switches language
 if (languageSelector) {
-  languageSelector.value = HINDI_SPEECH_LANGUAGE;
+  languageSelector.addEventListener("change", () => {
+    if (speechRecognitionActive || speechRecognitionShouldListen) {
+      stopSpeechRecognition();
+      setTimeout(() => startSpeechRecognition(), 100);
+    }
+  });
 }
 
 leaveBtn.addEventListener("click", () => {

@@ -1,6 +1,10 @@
-# MeetRecap - Smart Video Meeting & AI Recap Platform
+# <p align="center">
+#   <img src="/icon.png" alt="MeetRecap" width="120" />
+# </p>
 
-MeetRecap is a login-first multi-user video meeting prototype with live captions and downloadable meeting recaps (MOM PDFs).
+# MeetRecap - Smart Video Meeting & AI Recap Platform with PWA
+
+MeetRecap is a login-first multi-user video meeting prototype with live captions and downloadable meeting recaps (MOM PDFs). It includes a Progressive Web App (PWA) configuration for installable, offline-capable use.
 
 This README reflects the current workflow, debugging additions, and PDF rendering fixes applied during development.
 
@@ -29,7 +33,7 @@ This README reflects the current workflow, debugging additions, and PDF renderin
 2. Install dependencies:
 
 ```powershell
-cd "C:\Users\Raghav\Desktop\Multi-Videocall"
+cd "C:\Users\Raghav\Desktop\MeetRecap"
 npm install
 ```
 

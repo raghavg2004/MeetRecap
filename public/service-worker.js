@@ -1,7 +1,7 @@
 // MeetRecap Service Worker
-const CACHE_NAME = 'meetrecap-v3';
-const STATIC_CACHE = 'meetrecap-static-v3';
-const DYNAMIC_CACHE = 'meetrecap-dynamic-v3';
+const CACHE_NAME = 'meetrecap-v4';
+const STATIC_CACHE = 'meetrecap-static-v4';
+const DYNAMIC_CACHE = 'meetrecap-dynamic-v4';
 
 // Files to cache on install
 const STATIC_ASSETS = [

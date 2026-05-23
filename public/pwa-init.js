@@ -14,7 +14,7 @@
 
   // Register service worker on page load
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
+    navigator.serviceWorker.register('/service-worker.js?v=browser-only-stt-4')
       .then(registration => {
         console.log('[PWA] Service Worker registered successfully', registration);
         

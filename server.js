@@ -2,6 +2,10 @@ const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
+const dns = require("dns");
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
@@ -75,13 +79,14 @@ function configureRecapPdfFonts(doc) {
   doc.font("Helvetica");
   return { fontName: "Helvetica", boldFontName: "Helvetica-Bold" };
 }
+
 const USERS_FILE = path.join(DATA_DIR, "user.json");
 const LEGACY_USERS_FILE = path.join(DATA_DIR, "users.json");
 const AUTH_TOKEN_COOKIE = "meetrecap_auth";
 const SESSION_SECRET = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const JWT_SECRET = process.env.JWT_SECRET || "dev-jwt-secret-change-me";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "12h";
-const GMAIL_USER = sanitizeEmail(process.env.GMAIL_USER || "projectonnet11@gmail.com");
+const GMAIL_USER = String(process.env.GMAIL_USER || "projectonnet11@gmail.com").trim();
 const GMAIL_APP_PASSWORD = String(process.env.GMAIL_APP_PASSWORD || "dyjn senq xxdv xsya").replace(/\s+/g, "");
 const OPENAI_API_KEY = String(process.env.OPENAI_API_KEY || "").trim();
 const OPENAI_TRANSCRIBE_MODEL = String(process.env.OPENAI_TRANSCRIBE_MODEL || "whisper-1").trim() || "whisper-1";
@@ -97,6 +102,7 @@ const VOSK_MODEL_PATH = String(process.env.VOSK_MODEL_PATH || path.join(__dirnam
 const VOSK_HINDI_MODEL_PATH = String(process.env.VOSK_HINDI_MODEL_PATH || "").trim();
 const SUPPORTED_TRANSCRIPTION_LANGUAGES = String(process.env.SUPPORTED_TRANSCRIPTION_LANGUAGES || "en,hi").trim().toLowerCase().split(",").map(l => l.trim()).filter(l => l);
 const ENABLE_FALLBACK_TRANSCRIPTION = process.env.ENABLE_FALLBACK_TRANSCRIPTION === "true";
+const BROWSER_ONLY_STT = true;
 
 const io = new Server(server, {
   cors: {
@@ -124,32 +130,25 @@ app.use(
   }),
 );
 
-// ──── PWA Configuration ────────────────────────────────────────────
-// Set MIME type for manifest.json
+// PWA Configuration
 app.use((req, res, next) => {
   if (req.url === '/manifest.json') {
     res.type('application/manifest+json');
   }
-  // Set cache control headers
   if (req.url === '/service-worker.js') {
-    // Service workers should not be cached too long to ensure updates
     res.setHeader('Cache-Control', 'max-age=3600, public');
     res.type('application/javascript');
   } else if (req.url === '/manifest.json') {
     res.setHeader('Cache-Control', 'max-age=86400, public');
   } else if (req.url.match(/\.(js|css|png|jpg|gif|svg|woff|woff2|ttf|eot)$/)) {
-    // Cache static assets for 1 week
     res.setHeader('Cache-Control', 'max-age=604800, public');
   } else if (req.url.match(/\.(html)$/)) {
-    // HTML files: cache for 1 hour to allow fresh content
     res.setHeader('Cache-Control', 'max-age=3600, public, must-revalidate');
   }
-  
-  // PWA Headers
+
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  
   next();
 });
 
@@ -194,137 +193,6 @@ const meetingHistoryByUser = new Map();
 const endedMeetingsByRoom = new Map();
 const rooms = new Map();
 const RECAP_RETENTION_MS = Number(process.env.RECAP_RETENTION_MS || 1000 * 60 * 60 * 24);
-let transcriptionDisabled = false;
-
-function ensureUsersFileExists() {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  if (!fs.existsSync(USERS_FILE)) {
-    if (fs.existsSync(LEGACY_USERS_FILE)) {
-      fs.copyFileSync(LEGACY_USERS_FILE, USERS_FILE);
-    } else {
-      fs.writeFileSync(USERS_FILE, "[]\n", "utf8");
-    }
-  }
-}
-
-function loadUsersFromDisk() {
-  ensureUsersFileExists();
-
-  let rawUsers = [];
-  try {
-    const fileContents = fs.readFileSync(USERS_FILE, "utf8");
-    const parsedUsers = JSON.parse(fileContents);
-    rawUsers = Array.isArray(parsedUsers) ? parsedUsers : [];
-  } catch (error) {
-    console.error("Failed to load users from disk:", error);
-    rawUsers = [];
-  }
-
-  usersByEmail.clear();
-  usersById.clear();
-  meetingHistoryByUser.clear();
-
-  for (const user of rawUsers) {
-    if (!user || typeof user !== "object") {
-      continue;
-    }
-
-    if (!user.id || !user.email || !user.passwordHash) {
-      continue;
-    }
-
-    const normalizedUser = {
-      id: String(user.id),
-      email: sanitizeEmail(String(user.email)),
-      displayName: sanitizeDisplayName(String(user.displayName || "")),
-      passwordHash: String(user.passwordHash),
-      createdAt: Number.isFinite(Number(user.createdAt)) ? Number(user.createdAt) : Date.now(),
-    };
-
-    if (!normalizedUser.email || !normalizedUser.displayName) {
-      continue;
-    }
-
-    usersByEmail.set(normalizedUser.email, normalizedUser);
-    usersById.set(normalizedUser.id, normalizedUser);
-
-    // Restore meeting history for this user
-    if (Array.isArray(user.meetingHistory) && user.meetingHistory.length > 0) {
-      meetingHistoryByUser.set(normalizedUser.id, user.meetingHistory);
-    }
-  }
-}
-
-function saveUsersToDisk() {
-  ensureUsersFileExists();
-
-  const users = Array.from(usersById.values())
-    .map(user => ({
-      ...user,
-      meetingHistory: meetingHistoryByUser.get(user.id) || []
-    }))
-    .sort((left, right) => left.createdAt - right.createdAt);
-  fs.writeFileSync(USERS_FILE, `${JSON.stringify(users, null, 2)}\n`, "utf8");
-}
-
-loadUsersFromDisk();
-
-function sanitizeMeetingId(roomId) {
-  if (typeof roomId !== "string") {
-    return "";
-  }
-
-  const cleaned = roomId.trim().toUpperCase();
-  return /^[A-Z0-9-]{4,32}$/.test(cleaned) ? cleaned : "";
-}
-
-function sanitizeDisplayName(username) {
-  if (typeof username !== "string") {
-    return "";
-  }
-
-  const cleaned = username.trim().replace(/\s+/g, " ");
-  if (!cleaned || cleaned.length > 24) {
-    return "";
-  }
-
-  return cleaned.replace(/[<>]/g, "");
-}
-
-function sanitizeEmail(email) {
-  if (typeof email !== "string") {
-    return "";
-  }
-
-  const cleaned = email.trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned) ? cleaned : "";
-}
-
-function sanitizeChatMessage(text) {
-  if (typeof text !== "string") {
-    return "";
-  }
-
-  const cleaned = text.trim();
-  if (!cleaned || cleaned.length > 1000) {
-    return "";
-  }
-
-  return cleaned.replace(/[<>]/g, "");
-}
-
-function sanitizeSupportQuestion(question) {
-  if (typeof question !== "string") {
-    return "";
-  }
-
-  const cleaned = question.trim().replace(/\r\n/g, "\n");
-  if (!cleaned || cleaned.length > 2000) {
-    return "";
-  }
-
-  return cleaned.replace(/[<>]/g, "");
-}
 
 function escapeHtml(text) {
   return String(text || "").replace(/[&<>"']/g, (character) => ({
@@ -424,6 +292,127 @@ function sanitizeMeetingTitle(title) {
 
   return cleaned.replace(/[<>]/g, "");
 }
+
+function sanitizeEmail(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+
+function sanitizeDisplayName(value) {
+  const cleaned = String(value || "").trim().replace(/\s+/g, " ");
+  if (!cleaned || cleaned.length > 80) {
+    return "";
+  }
+
+  return cleaned.replace(/[<>]/g, "");
+}
+
+function sanitizeChatMessage(text) {
+  if (typeof text !== "string") {
+    return "";
+  }
+
+  const cleaned = text.trim();
+  if (!cleaned || cleaned.length > 1000) {
+    return "";
+  }
+
+  return cleaned.replace(/[<>]/g, "");
+}
+
+function sanitizeSupportQuestion(question) {
+  if (typeof question !== "string") {
+    return "";
+  }
+
+  const cleaned = question.trim().replace(/\r\n/g, "\n");
+  if (!cleaned || cleaned.length > 2000) {
+    return "";
+  }
+
+  return cleaned.replace(/[<>]/g, "");
+}
+
+function sanitizeMeetingId(roomId) {
+  if (typeof roomId !== "string") {
+    return "";
+  }
+
+  const cleaned = roomId.trim().toUpperCase();
+  return /^[A-Z0-9-]{4,32}$/.test(cleaned) ? cleaned : "";
+}
+
+function ensureUsersFileExists() {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(USERS_FILE)) {
+    if (fs.existsSync(LEGACY_USERS_FILE)) {
+      fs.copyFileSync(LEGACY_USERS_FILE, USERS_FILE);
+    } else {
+      fs.writeFileSync(USERS_FILE, "[]\n", "utf8");
+    }
+  }
+}
+
+function loadUsersFromDisk() {
+  ensureUsersFileExists();
+
+  let rawUsers = [];
+  try {
+    const fileContents = fs.readFileSync(USERS_FILE, "utf8");
+    const parsedUsers = JSON.parse(fileContents);
+    rawUsers = Array.isArray(parsedUsers) ? parsedUsers : [];
+  } catch (error) {
+    console.error("Failed to load users from disk:", error);
+    rawUsers = [];
+  }
+
+  usersByEmail.clear();
+  usersById.clear();
+  meetingHistoryByUser.clear();
+
+  for (const user of rawUsers) {
+    if (!user || typeof user !== "object") {
+      continue;
+    }
+
+    if (!user.id || !user.email || !user.passwordHash) {
+      continue;
+    }
+
+    const normalizedUser = {
+      id: String(user.id),
+      email: sanitizeEmail(String(user.email)),
+      displayName: sanitizeDisplayName(String(user.displayName || "")),
+      passwordHash: String(user.passwordHash),
+      createdAt: Number.isFinite(Number(user.createdAt)) ? Number(user.createdAt) : Date.now(),
+    };
+
+    if (!normalizedUser.email || !normalizedUser.displayName) {
+      continue;
+    }
+
+    usersByEmail.set(normalizedUser.email, normalizedUser);
+    usersById.set(normalizedUser.id, normalizedUser);
+
+    if (Array.isArray(user.meetingHistory) && user.meetingHistory.length > 0) {
+      meetingHistoryByUser.set(normalizedUser.id, user.meetingHistory);
+    }
+  }
+}
+
+function saveUsersToDisk() {
+  ensureUsersFileExists();
+
+  const users = Array.from(usersById.values())
+    .map((user) => ({
+      ...user,
+      meetingHistory: meetingHistoryByUser.get(user.id) || [],
+    }))
+    .sort((left, right) => left.createdAt - right.createdAt);
+
+  fs.writeFileSync(USERS_FILE, `${JSON.stringify(users, null, 2)}\n`, "utf8");
+}
+
+loadUsersFromDisk();
 
 function parseCookies(headerValue) {
   const cookies = new Map();
@@ -926,7 +915,13 @@ async function transcribeWithWhisperApi(buffer, mimeType, { apiKey, baseUrl, mod
 
 async function transcribeAudioBuffer({ buffer, mimeType, language }) {
   const safeMimeType = String(mimeType || "audio/webm").split(";")[0].trim();
+  if (BROWSER_ONLY_STT) {
+    console.log('[Transcribe] BROWSER_ONLY_STT enabled: skipping server transcription.');
+    return "";
+  }
+
   console.log(`[Transcribe] Processing audio mimeType=${safeMimeType} size=${buffer.length}`);
+
 
   // 1) GROQ WHISPER — free tier, auto language detection, fast
   if (GROQ_API_KEY) {
@@ -1688,6 +1683,10 @@ app.get("/api/meetings/:roomId/recap", requireAuth, (req, res) => {
     return;
   }
 
+    // Server-side transcription is enabled; recap is available
+
+    // (was: server-only STT guard removed — recap is still available)
+
   const recap = getRecapForRoom(roomId);
   if (!recap) {
     res.status(404).json({ error: "Meeting recap not found." });
@@ -1782,83 +1781,6 @@ app.get("/api/meetings/:roomId/personal-recap.pdf", requireAuth, async (req, res
     res.status(500).json({ error: "Failed to generate PDF." });
   }
 });
-
-app.post(
-  "/api/meetings/:roomId/transcribe",
-  requireAuth,
-  express.raw({ type: (req) => {
-    const ct = String(req.headers["content-type"] || "").toLowerCase();
-    return ct.startsWith("audio/") || ct === "application/octet-stream";
-  }, limit: "25mb" }),
-  async (req, res) => {
-    const roomId = sanitizeMeetingId(req.params?.roomId);
-    if (!roomId) {
-      res.status(400).json({ error: "Invalid meeting ID." });
-      return;
-    }
-
-    const room = rooms.get(roomId);
-    if (!room || room.ended) {
-      res.status(404).json({ error: "Meeting is no longer active." });
-      return;
-    }
-
-    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
-      res.status(400).json({ error: "Audio payload is empty." });
-      return;
-    }
-
-    const participantEntry = Array.from(room.participants.entries()).find(([, value]) => value.userId === req.authUser.id);
-    if (!participantEntry) {
-      res.status(403).json({ error: "You are not currently in this meeting." });
-      return;
-    }
-
-    const [socketId, participant] = participantEntry;
-    const speakerName = sanitizeDisplayName(participant.username || req.authUser?.displayName) || req.authUser?.displayName || "Participant";
-    const audioLanguage = sanitizeTranscriptLanguage(req.headers["x-transcript-language"] || req.headers["x-language"] || OPENAI_TRANSCRIBE_LANGUAGE);
-    const mimeType = String(req.headers["content-type"] || "audio/webm");
-
-    try {
-      const text = await transcribeAudioBuffer({
-        buffer: req.body,
-        mimeType,
-        language: audioLanguage,
-      });
-
-      const safeText = sanitizeTranscriptText(text);
-      if (!safeText) {
-        res.json({ transcript: null });
-        return;
-      }
-
-      const transcript = {
-        id: `${Date.now()}-${req.authUser.id}-transcript`,
-        socketId,
-        userId: req.authUser.id,
-        username: speakerName,
-        text: safeText,
-        timestamp: Date.now(),
-        source: "stt-backend",
-      };
-
-      room.transcripts.push(transcript);
-      room.transcripts = trimRecapEntries(room.transcripts);
-
-      io.to(roomId).emit("voice-transcript", transcript);
-      res.json({ transcript });
-    } catch (error) {
-      const message = String(error?.message || "");
-      console.log("[Transcribe] Error caught:", message, "full error:", error);
-      if (/not configured/i.test(message)) {
-        res.status(503).json({ error: "Transcription backend is not configured." });
-        return;
-      }
-
-      res.status(502).json({ error: message || "Transcription failed." });
-    }
-  },
-);
 
 app.get("/config", (req, res) => {
   const iceServers = [{ urls: "stun:stun.l.google.com:19302" }];
@@ -2356,5 +2278,14 @@ io.on("connection", (socket) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log("Speech transcription is browser-only via the Web Speech API.");
+  if (BROWSER_ONLY_STT) {
+    console.log("[STT] Browser-only mode: server transcription disabled.");
+  } else if (GROQ_API_KEY) {
+    console.log("[STT] Groq Whisper (primary) → OpenAI Whisper (fallback) → Browser STT");
+  } else if (OPENAI_API_KEY) {
+    console.log("[STT] OpenAI Whisper (primary) → Browser STT fallback");
+  } else {
+    console.log("[STT] No cloud STT API key found. Using Browser Web Speech API only.");
+    console.log("[STT] Add GROQ_API_KEY to .env for free server-side transcription.");
+  }
 });
