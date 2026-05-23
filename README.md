@@ -1,5 +1,5 @@
 <h1 style="display:flex; align-items:center; gap:12px;">
-	<img src="public/icon.png" alt="MeetRecap" style="height:1em; width:auto; display:inline-block;" />
+	<img src="/icon.png" alt="MeetRecap" style="height:1em; width:auto; display:inline-block;" />
 	<span>MeetRecap - Smart Video Meeting &amp; AI Recap Platform with PWA</span>
 </h1>
 
@@ -32,7 +32,7 @@ This README reflects the current workflow, debugging additions, and PDF renderin
 2. Install dependencies:
 
 ```powershell
-cd "C:\Users\Raghav\Desktop\MeetRecap"
+cd "<project-folder>"  # replace with the folder where you cloned the repo (e.g. "MeetRecap - PWA")
 npm install
 ```
 
@@ -40,8 +40,16 @@ Notes for Windows: some optional native modules (used by transitive deps) may re
 
 3. Start the server:
 
+Option A — using `npm`:
+
 ```powershell
 npm start
+```
+
+Option B — using the Windows batch script (double-click or run from PowerShell):
+
+```powershell
+.\run.bat
 ```
 
 4. Open the app in a Chromium-based browser (Chrome or Edge) for best speech recognition support:
