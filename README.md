@@ -1,7 +1,7 @@
-<p align="left" style="display:flex; align-items:center; gap:16px;">
+<h1 style="display:flex; align-items:center; gap:16px;">
 	<img src="public/icon.png" alt="MeetRecap" width="100" />
-	<span style="font-size:28px; font-weight:700;">MeetRecap - Smart Video Meeting &amp; AI Recap Platform with PWA</span>
-</p>
+	<span>MeetRecap - Smart Video Meeting &amp; AI Recap Platform with PWA</span>
+</h1>
 
 MeetRecap is a login-first multi-user video meeting prototype with live captions and downloadable meeting recaps (MOM PDFs). It includes a Progressive Web App (PWA) configuration for installable, offline-capable use.
 
